@@ -1,0 +1,33 @@
+# ═══════════════════════════════════════════════════════════════
+# Supabase CLI config — supabase/config.toml
+# ═══════════════════════════════════════════════════════════════
+
+[project]
+id = "tu-project-id-aqui"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[auth.external.google]
+enabled = false
+
+[storage]
+enabled = true
+file_size_limit = "10MB"
