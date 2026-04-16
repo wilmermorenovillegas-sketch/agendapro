@@ -42,14 +42,22 @@ export default function AppointmentsPage() {
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState(EMPTY_FORM);
   const [selectedService, setSelectedService] = useState(null);
-  const [filterDate, setFilterDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [filterDate, setFilterDate] = useState(() => {
+    // Fecha de hoy en zona horaria local (no UTC)
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
 
   const loadData = async () => {
     try {
-      const start = new Date(filterDate);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(filterDate);
-      end.setHours(23, 59, 59, 999);
+      // Parsear fecha del filtro respetando zona horaria local (Lima)
+      // filterDate viene como "YYYY-MM-DD" — lo tratamos como fecha local, no UTC
+      const [year, month, day] = filterDate.split('-').map(Number);
+      const start = new Date(year, month - 1, day, 0, 0, 0, 0);
+      const end = new Date(year, month - 1, day, 23, 59, 59, 999);
 
       const [appts, svcs, profs, locs, cls] = await Promise.all([
         appointmentService.getAll({ startDate: start.toISOString(), endDate: end.toISOString() }),
@@ -184,7 +192,13 @@ export default function AppointmentsPage() {
               <label className="text-sm font-medium text-gray-600">📅 Fecha:</label>
               <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}
                 className="input-field flex-1 max-w-xs" />
-              <button onClick={() => setFilterDate(new Date().toISOString().split('T')[0])}
+              <button onClick={() => {
+                const d = new Date();
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                setFilterDate(`${y}-${m}-${day}`);
+              }}
                 className="btn-secondary px-4 py-2 text-sm">Hoy</button>
             </div>
 
