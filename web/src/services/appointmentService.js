@@ -1,11 +1,11 @@
 // ═══════════════════════════════════════════════════════════════
 // src/services/appointmentService.js
+// Con campos de pago incluidos
 // ═══════════════════════════════════════════════════════════════
 
 import { supabase } from '../lib/supabase';
 
 const appointmentService = {
-  // Listar citas con filtros opcionales
   getAll: async (filters = {}) => {
     const { data: { session } } = await supabase.auth.getSession();
     const tenantId = session?.user?.app_metadata?.tenant_id;
@@ -14,6 +14,7 @@ const appointmentService = {
       .from('appointments')
       .select(`
         id, start_time, end_time, status, price, notes,
+        payment_status, payment_proof_url, payment_notes,
         client_id, service_id, professional_id, location_id,
         clients ( first_name, last_name, phone, email ),
         services ( name, duration_minutes, color ),
