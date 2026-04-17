@@ -1,5 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 // src/services/clientService.js
+// Con función getDetail para historial completo
 // ═══════════════════════════════════════════════════════════════
 
 import { supabase } from '../lib/supabase';
@@ -18,6 +19,12 @@ const clientService = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  getDetail: async (clientId) => {
+    const { data, error } = await supabase.rpc('get_client_detail', { p_client_id: clientId });
+    if (error) throw error;
+    return typeof data === 'string' ? JSON.parse(data) : data;
   },
 
   create: async (client) => {
