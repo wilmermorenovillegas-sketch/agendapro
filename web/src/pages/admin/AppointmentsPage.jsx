@@ -13,6 +13,7 @@ import serviceService from '../../services/serviceService';
 import professionalService from '../../services/professionalService';
 import locationService from '../../services/locationService';
 import clientService from '../../services/clientService';
+import paymentService from '../../services/paymentService';
 
 const STATUS_LABELS = {
   pending:     { label: 'Pendiente',  bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-400' },
@@ -529,11 +530,53 @@ function MonthView({ year, month, appointmentsByDay, onDayClick }) {
 function AppointmentDetail({ appt, onClose, onStatusChange }) {
   const statusInfo = STATUS_LABELS[appt.status] || STATUS_LABELS.pending;
   const startDate = new Date(appt.start_time);
+  const [uploading, setUploading] = useState(false);
+  const [paymentAction, setPaymentAction] = useState('');
+
+  const PAYMENT_LABELS = {
+    not_required: { label: 'No requerido', color: 'bg-gray-100 text-gray-500' },
+    pending: { label: 'Pago pendiente', color: 'bg-yellow-100 text-yellow-700' },
+    uploaded: { label: 'Comprobante enviado', color: 'bg-blue-100 text-blue-700' },
+    approved: { label: 'Pago aprobado', color: 'bg-green-100 text-green-700' },
+    rejected: { label: 'Pago rechazado', color: 'bg-red-100 text-red-700' },
+  };
+
+  const payInfo = PAYMENT_LABELS[appt.payment_status] || PAYMENT_LABELS.not_required;
 
   const formatDateTime = (d) => d.toLocaleString('es-PE', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: true,
   });
+
+  const handleUploadProof = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await paymentService.uploadProof(appt.id, file);
+      alert('Comprobante subido exitosamente. Pendiente de aprobación.');
+      onClose();
+    } catch (err) {
+      alert('Error subiendo comprobante: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handlePaymentAction = async (action) => {
+    const notes = prompt(action === 'approve' ? '¿Notas de aprobación? (opcional)' : '¿Motivo del rechazo?') || '';
+    setPaymentAction(action);
+    try {
+      if (action === 'approve') await paymentService.approve(appt.id, notes);
+      else await paymentService.reject(appt.id, notes);
+      alert(action === 'approve' ? 'Pago aprobado' : 'Pago rechazado');
+      onClose();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setPaymentAction('');
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -586,6 +629,55 @@ function AppointmentDetail({ appt, onClose, onStatusChange }) {
         )}
       </div>
 
+      {/* Sección de Pagos */}
+      <div className="card p-5">
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">💳 Pago</h3>
+        <div className="flex items-center gap-2 mb-3">
+          <span className={'px-3 py-1 text-xs font-bold rounded-full ' + payInfo.color}>
+            {payInfo.label}
+          </span>
+        </div>
+
+        {/* Mostrar comprobante si existe */}
+        {appt.payment_proof_url && (
+          <div className="mb-3">
+            <a href={appt.payment_proof_url} target="_blank" rel="noopener noreferrer"
+              className="text-sm text-teal-600 hover:text-teal-700 underline">
+              📎 Ver comprobante de pago
+            </a>
+          </div>
+        )}
+
+        {/* Botón para subir comprobante */}
+        {(appt.payment_status === 'pending' || appt.payment_status === 'rejected') && (
+          <div className="mb-3">
+            <label className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 cursor-pointer text-sm font-medium">
+              {uploading ? 'Subiendo...' : '📤 Subir comprobante'}
+              <input type="file" accept="image/*,.pdf" onChange={handleUploadProof} className="hidden" disabled={uploading} />
+            </label>
+          </div>
+        )}
+
+        {/* Botones de aprobación/rechazo para admin */}
+        {appt.payment_status === 'uploaded' && (
+          <div className="flex items-center gap-2">
+            <button onClick={() => handlePaymentAction('approve')} disabled={!!paymentAction}
+              className="px-4 py-2 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100 font-medium">
+              ✓ Aprobar pago
+            </button>
+            <button onClick={() => handlePaymentAction('reject')} disabled={!!paymentAction}
+              className="px-4 py-2 text-sm bg-red-50 text-red-700 rounded-lg hover:bg-red-100 font-medium">
+              ✗ Rechazar pago
+            </button>
+          </div>
+        )}
+
+        {appt.payment_notes && (
+          <p className="text-xs text-gray-500 mt-2 italic">Nota: {appt.payment_notes}</p>
+        )}
+      </div>
+
+      {/* Acciones de estado */}
       <div className="card p-4">
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Cambiar estado</h3>
         <div className="flex items-center gap-2 flex-wrap">
