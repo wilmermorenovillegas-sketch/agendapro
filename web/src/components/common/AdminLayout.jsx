@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { path: '/admin/appointments', label: 'Citas', icon: '\ud83d\udcc5' },
   { path: '/admin/performance', label: 'Rendimiento', icon: '\ud83c\udfc6' },
   { path: '/admin/reports', label: 'Reportes & IA', icon: '\ud83e\udd16' },
+  { path: '/admin/chat', label: 'Chat', icon: '\ud83d\udcac' },
 ];
 
 export default function AdminLayout() {
