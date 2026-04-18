@@ -16,6 +16,7 @@ import ServicesPage from './pages/admin/ServicesPage';
 import ClientsPage from './pages/admin/ClientsPage';
 import AppointmentsPage from './pages/admin/AppointmentsPage';
 import PerformancePage from './pages/admin/PerformancePage';
+import ReportsPage from './pages/admin/ReportsPage';
 
 export default function App() {
   return (
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="clients" element={<ClientsPage />} />
             <Route path="appointments" element={<AppointmentsPage />} />
             <Route path="performance" element={<PerformancePage />} />
+            <Route path="reports" element={<ReportsPage />} />
           </Route>
 
           {/* Redirecciones */}
