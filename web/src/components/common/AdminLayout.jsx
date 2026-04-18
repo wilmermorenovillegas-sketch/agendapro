@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { path: '/admin/services', label: 'Servicios', icon: '📋' },
   { path: '/admin/clients', label: 'Clientes', icon: '👤' },
   { path: '/admin/appointments', label: 'Citas', icon: '📅' },
+  { path: '/admin/performance', label: 'Rendimiento', icon: '🏆' },
   // { path: '/admin/professionals', label: 'Profesionales', icon: '👥' },
   // { path: '/admin/services', label: 'Servicios', icon: '📋' },
   // { path: '/admin/appointments', label: 'Citas', icon: '📅' },
