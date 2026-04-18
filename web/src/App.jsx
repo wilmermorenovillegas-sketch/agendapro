@@ -1,8 +1,3 @@
-// AgendaPro v1.0 - Build final con Chat
-// ═══════════════════════════════════════════════════════════════
-// src/App.jsx
-// ═══════════════════════════════════════════════════════════════
-
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -27,7 +22,6 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-
           <Route path="/admin" element={
             <ProtectedRoute allowedRoles={['SuperAdmin', 'Admin']}>
               <AdminLayout />
@@ -45,7 +39,6 @@ export default function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="chat" element={<ChatPage />} />
           </Route>
-
           <Route path="/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
