@@ -13,7 +13,6 @@ import ClientsPage from './pages/admin/ClientsPage';
 import AppointmentsPage from './pages/admin/AppointmentsPage';
 import PerformancePage from './pages/admin/PerformancePage';
 import ReportsPage from './pages/admin/ReportsPage';
-import ChatPage from './pages/admin/ChatPage';
 
 export default function App() {
   return (
