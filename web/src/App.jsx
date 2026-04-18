@@ -17,17 +17,16 @@ import ClientsPage from './pages/admin/ClientsPage';
 import AppointmentsPage from './pages/admin/AppointmentsPage';
 import PerformancePage from './pages/admin/PerformancePage';
 import ReportsPage from './pages/admin/ReportsPage';
+import ChatPage from './pages/admin/ChatPage';
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Rutas públicas */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* Panel Admin con layout sidebar */}
           <Route path="/admin" element={
             <ProtectedRoute allowedRoles={['SuperAdmin', 'Admin']}>
               <AdminLayout />
@@ -43,9 +42,9 @@ export default function App() {
             <Route path="appointments" element={<AppointmentsPage />} />
             <Route path="performance" element={<PerformancePage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="chat" element={<ChatPage />} />
           </Route>
 
-          {/* Redirecciones */}
           <Route path="/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
