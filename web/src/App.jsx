@@ -13,6 +13,7 @@ import ClientsPage from './pages/admin/ClientsPage';
 import AppointmentsPage from './pages/admin/AppointmentsPage';
 import PerformancePage from './pages/admin/PerformancePage';
 import ReportsPage from './pages/admin/ReportsPage';
+import ChatPage from './pages/admin/ChatPage';
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="appointments" element={<AppointmentsPage />} />
             <Route path="performance" element={<PerformancePage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="chat" element={<ChatPage />} />
           </Route>
           <Route path="/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
