@@ -15,6 +15,7 @@ import ProfessionalsPage from './pages/admin/ProfessionalsPage';
 import ServicesPage from './pages/admin/ServicesPage';
 import ClientsPage from './pages/admin/ClientsPage';
 import AppointmentsPage from './pages/admin/AppointmentsPage';
+import PerformancePage from './pages/admin/PerformancePage';
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="services" element={<ServicesPage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="appointments" element={<AppointmentsPage />} />
+            <Route path="performance" element={<PerformancePage />} />
           </Route>
 
           {/* Redirecciones */}
