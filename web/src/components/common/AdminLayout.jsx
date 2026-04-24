@@ -1,27 +1,34 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
+// Items del menu. El campo `adminOnly` marca los que solo ven Admin/SuperAdmin
 const NAV_ITEMS = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: '\ud83d\udcca' },
-  { path: '/admin/business', label: 'Mi Negocio', icon: '\ud83c\udfe2' },
-  { path: '/admin/locations', label: 'Sedes', icon: '\ud83d\udccd' },
-  { path: '/admin/professionals', label: 'Profesionales', icon: '\ud83d\udc65' },
+  { path: '/admin/business', label: 'Mi Negocio', icon: '\ud83c\udfe2', adminOnly: true },
+  { path: '/admin/locations', label: 'Sedes', icon: '\ud83d\udccd', adminOnly: true },
+  { path: '/admin/professionals', label: 'Profesionales', icon: '\ud83d\udc65', adminOnly: true },
   { path: '/admin/services', label: 'Servicios', icon: '\ud83d\udccb' },
   { path: '/admin/clients', label: 'Clientes', icon: '\ud83d\udc64' },
   { path: '/admin/appointments', label: 'Citas', icon: '\ud83d\udcc5' },
+  { path: '/admin/users', label: 'Usuarios', icon: '\ud83d\udd11', adminOnly: true },
   { path: '/admin/performance', label: 'Rendimiento', icon: '\ud83c\udfc6' },
-  { path: '/admin/reports', label: 'Reportes & IA', icon: '\ud83e\udd16' },
+  { path: '/admin/reports', label: 'Reportes & IA', icon: '\ud83e\udd16', adminOnly: true },
   { path: '/admin/chat', label: 'Chat', icon: '\ud83d\udcac' },
 ];
 
 export default function AdminLayout() {
-  const { profile, logout } = useAuth();
+  const { profile, signOut, isAdmin, displayRole } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await logout();
+    // signOut del AuthContext V3 ya redirige a /login automaticamente,
+    // pero dejamos el navigate por si acaso falla la redireccion forzada
+    await signOut();
     navigate('/login');
   };
+
+  // Filtrar items segun rol
+  const visibleNavItems = NAV_ITEMS.filter(item => !item.adminOnly || isAdmin);
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -44,7 +51,7 @@ export default function AdminLayout() {
           </div>
         </div>
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink key={item.path} to={item.path}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -67,7 +74,10 @@ export default function AdminLayout() {
               <div className="text-sm font-medium text-slate-800 truncate">
                 {profile?.first_name} {profile?.last_name}
               </div>
-              <div className="text-xs text-gray-400 truncate">{profile?.tenant_name}</div>
+              <div className="text-xs text-teal-600 font-semibold truncate">
+                {displayRole}
+              </div>
+              <div className="text-[10px] text-gray-400 truncate">{profile?.tenant_name}</div>
             </div>
             <button onClick={handleLogout} title="Cerrar sesion" className="text-gray-400 hover:text-red-500 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,7 +90,10 @@ export default function AdminLayout() {
       <main className="flex-1 overflow-auto">
         <div className="md:hidden bg-white border-b border-gray-100 p-4">
           <div className="flex items-center justify-between">
-            <div className="font-sora font-bold text-slate-800 tracking-wider text-sm">AGENDAPRO</div>
+            <div>
+              <div className="font-sora font-bold text-slate-800 tracking-wider text-sm">AGENDAPRO</div>
+              <div className="text-[10px] text-teal-600 font-semibold">{displayRole}</div>
+            </div>
             <button onClick={handleLogout} className="text-gray-400 hover:text-red-500">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -88,7 +101,7 @@ export default function AdminLayout() {
             </button>
           </div>
           <div className="flex gap-1 mt-3 overflow-x-auto pb-1">
-            {NAV_ITEMS.map((item) => (
+            {visibleNavItems.map((item) => (
               <NavLink key={item.path} to={item.path}
                 className={({ isActive }) =>
                   `whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
