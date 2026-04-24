@@ -1,117 +1,135 @@
-// ═══════════════════════════════════════════════════════════════
-// src/context/AuthContext.jsx
-// FIX DEFINITIVO — nunca se queda en "cargando"
-// ═══════════════════════════════════════════════════════════════
+// ============================================================
+// AuthContext.jsx - NEXOVA AgendaPro
+// Contexto de autenticación BLINDADO
+// - Timeout duro de 6s (evita cargando infinito)
+// - Auto-limpieza de sesión corrupta
+// - Logs claros en consola (prefijo [AUTH])
+// - Perfil fallback si get_my_profile falla
+// ============================================================
 
 import { createContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
 export const AuthContext = createContext(null);
 
+// Clave del item de Supabase en localStorage (para limpiar si hay corrupción)
+const SUPABASE_AUTH_KEY = 'sb-acpmwvhttzteobvmkrca-auth-token';
+
+// Helper: limpia toda la sesión local y recarga
+const hardReset = () => {
+  console.warn('[AUTH] Ejecutando hardReset: limpiando localStorage y recargando');
+  try {
+    localStorage.removeItem(SUPABASE_AUTH_KEY);
+    localStorage.clear();
+    sessionStorage.clear();
+  } catch (e) {
+    console.error('[AUTH] Error limpiando storage:', e);
+  }
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Cargar perfil con timeout y manejo de errores robusto
-  const loadProfile = useCallback(async (sessionUser) => {
-    if (!sessionUser) {
-      setUser(null);
+  // ----------------------------------------------------------
+  // Carga el perfil del usuario vía RPC get_my_profile()
+  // Si falla, devuelve perfil mínimo para no bloquear la app
+  // ----------------------------------------------------------
+  const loadProfile = useCallback(async (authUser) => {
+    if (!authUser) {
+      console.log('[AUTH] loadProfile: no hay authUser, limpiando perfil');
       setProfile(null);
-      setLoading(false);
-      return;
+      return null;
     }
 
+    console.log('[AUTH] loadProfile: llamando RPC get_my_profile para', authUser.email);
+
     try {
-      // Timeout de 6 segundos para evitar carga infinita
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 6000);
+      // Timeout de 5s para la llamada RPC (por si Supabase cuelga)
+      const rpcPromise = supabase.rpc('get_my_profile');
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('RPC timeout 5s')), 5000)
+      );
 
-      const { data, error: rpcError } = await supabase.rpc('get_my_profile');
+      const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
 
-      clearTimeout(timeout);
-
-      if (rpcError) {
-        console.error('Error en get_my_profile:', rpcError.message);
-        // Si falla la RPC, construir perfil minimo desde la sesion
-        const fallbackProfile = buildFallbackProfile(sessionUser);
-        setUser(sessionUser);
-        setProfile(fallbackProfile);
-        setLoading(false);
-        return;
+      if (error) {
+        console.error('[AUTH] RPC error:', error);
+        throw error;
       }
 
-      // Parsear data si viene como string
-      let profileData = data;
+      // Parseo defensivo: a veces RPC devuelve string JSON
+      let parsedData = data;
       if (typeof data === 'string') {
-        try { profileData = JSON.parse(data); } catch (e) { profileData = null; }
+        try {
+          parsedData = JSON.parse(data);
+        } catch {
+          parsedData = null;
+        }
       }
 
-      if (!profileData) {
-        // Perfil no encontrado, usar fallback
-        const fallbackProfile = buildFallbackProfile(sessionUser);
-        setUser(sessionUser);
-        setProfile(fallbackProfile);
-        setLoading(false);
-        return;
+      if (parsedData) {
+        console.log('[AUTH] Perfil cargado OK:', parsedData.email, 'roles:', parsedData.roles);
+        setProfile(parsedData);
+        return parsedData;
       }
 
-      setUser(sessionUser);
-      setProfile(profileData);
+      // Si RPC devuelve null, usar perfil fallback
+      throw new Error('RPC devolvió null');
     } catch (err) {
-      console.error('Error cargando perfil:', err);
-      // En caso de cualquier error, usar fallback
-      const fallbackProfile = buildFallbackProfile(sessionUser);
-      setUser(sessionUser);
+      console.warn('[AUTH] loadProfile falló, usando perfil fallback:', err.message);
+
+      // Perfil mínimo de emergencia (usuario puede entrar con rol Client)
+      const fallbackProfile = {
+        id: authUser.id,
+        email: authUser.email || '',
+        first_name: '',
+        last_name: '',
+        full_name: authUser.email?.split('@')[0] || 'Usuario',
+        tenant_id: null,
+        tenant_name: '',
+        tenant_logo: '',
+        tenant_category: '',
+        phone_number: '',
+        profile_photo_url: null,
+        is_active: true,
+        roles: ['Client'],
+      };
+
       setProfile(fallbackProfile);
-    } finally {
-      setLoading(false);
+      return fallbackProfile;
     }
   }, []);
 
-  // Construir perfil minimo desde los datos de la sesion
-  function buildFallbackProfile(sessionUser) {
-    const meta = sessionUser.user_metadata || {};
-    const appMeta = sessionUser.app_metadata || {};
-    return {
-      id: sessionUser.id,
-      tenant_id: appMeta.tenant_id || null,
-      tenant_name: '',
-      tenant_logo: '',
-      tenant_category: '',
-      first_name: meta.first_name || sessionUser.email?.split('@')[0] || '',
-      last_name: meta.last_name || '',
-      full_name: (meta.first_name || '') + ' ' + (meta.last_name || ''),
-      email: sessionUser.email || '',
-      phone_number: meta.phone_number || '',
-      profile_photo_url: null,
-      is_active: true,
-      roles: [appMeta.user_role || 'Client'],
-    };
-  }
-
+  // ----------------------------------------------------------
+  // Inicialización: recupera sesión existente
+  // TIMEOUT DURO: si no termina en 6s, fuerza loading=false
+  // ----------------------------------------------------------
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
+    let forcedTimeout = null;
 
-    // Timeout de seguridad: si despues de 8 segundos sigue loading, forzar fin
-    const safetyTimeout = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn('Safety timeout: forzando fin de carga');
+    console.log('[AUTH] Inicializando AuthContext...');
+
+    // Timeout duro: a los 6s, si todavía loading, forzar salida
+    forcedTimeout = setTimeout(() => {
+      if (isMounted) {
+        console.error('[AUTH] TIMEOUT 6s alcanzado. Forzando loading=false');
         setLoading(false);
       }
-    }, 8000);
+    }, 6000);
 
-    // Obtener sesion actual
     const initAuth = async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        console.log('[AUTH] Obteniendo sesión actual...');
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (sessionError) {
-          console.error('Error obteniendo sesion:', sessionError.message);
-          // Limpiar sesion corrupta
-          localStorage.removeItem('sb-acpmwvhttzteobvmkrca-auth-token');
-          if (mounted) {
+        if (error) {
+          console.error('[AUTH] Error getSession:', error);
+          // Si hay error de sesión, limpiar y permitir login fresco
+          hardReset();
+          if (isMounted) {
             setUser(null);
             setProfile(null);
             setLoading(false);
@@ -119,101 +137,185 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        if (session?.user && mounted) {
+        if (session?.user) {
+          console.log('[AUTH] Sesión encontrada para:', session.user.email);
+          if (isMounted) setUser(session.user);
           await loadProfile(session.user);
-        } else if (mounted) {
-          setLoading(false);
+        } else {
+          console.log('[AUTH] No hay sesión activa');
+          if (isMounted) {
+            setUser(null);
+            setProfile(null);
+          }
         }
       } catch (err) {
-        console.error('Error en initAuth:', err);
-        if (mounted) {
+        console.error('[AUTH] Error en initAuth:', err);
+        if (isMounted) {
           setUser(null);
           setProfile(null);
+        }
+      } finally {
+        if (isMounted) {
+          console.log('[AUTH] initAuth terminado, loading=false');
           setLoading(false);
+          clearTimeout(forcedTimeout);
         }
       }
     };
 
     initAuth();
 
-    // Escuchar cambios de autenticacion
+    // ----------------------------------------------------------
+    // Suscripción a cambios de autenticación (login, logout, refresh)
+    // ----------------------------------------------------------
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted) return;
+        console.log('[AUTH] onAuthStateChange:', event, session?.user?.email || '(sin user)');
 
-        if (event === 'SIGNED_IN' && session?.user) {
-          await loadProfile(session.user);
+        if (!isMounted) return;
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session?.user) {
+            setUser(session.user);
+            await loadProfile(session.user);
+            setLoading(false);
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setProfile(null);
           setLoading(false);
-        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          // No recargar perfil en refresh, solo actualizar user
-          setUser(session.user);
         }
       }
     );
 
     return () => {
-      mounted = false;
-      clearTimeout(safetyTimeout);
+      isMounted = false;
+      if (forcedTimeout) clearTimeout(forcedTimeout);
       subscription?.unsubscribe();
     };
   }, [loadProfile]);
 
-  const login = async (email, password) => {
-    setError(null);
+  // ----------------------------------------------------------
+  // Login con email + password
+  // ----------------------------------------------------------
+  const signIn = async (email, password) => {
+    console.log('[AUTH] signIn intentando con:', email);
+    setLoading(true);
+
     try {
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
         password,
       });
 
-      if (loginError) {
-        // Mensajes de error en espanol
-        if (loginError.message.includes('Invalid login')) {
-          throw new Error('Credenciales incorrectas. Verifique su correo y contrasena.');
-        }
-        if (loginError.message.includes('Email not confirmed')) {
-          throw new Error('Debe confirmar su correo electronico antes de iniciar sesion.');
-        }
-        if (loginError.message.includes('Database error')) {
-          throw new Error('Error temporal del servidor. Intente de nuevo en unos segundos.');
-        }
-        throw new Error(loginError.message);
+      if (error) {
+        console.error('[AUTH] signIn error:', error.message);
+        setLoading(false);
+        return { success: false, error: error.message };
       }
 
-      return data;
+      console.log('[AUTH] signIn OK para:', data.user?.email);
+      // onAuthStateChange se encargará de setear user + profile + loading=false
+      // Pero por si no llega a tiempo, lo hacemos aquí también
+      if (data.user) {
+        setUser(data.user);
+        await loadProfile(data.user);
+      }
+      setLoading(false);
+      return { success: true, data };
     } catch (err) {
-      setError(err.message);
-      throw err;
+      console.error('[AUTH] signIn excepción:', err);
+      setLoading(false);
+      return { success: false, error: err.message || 'Error desconocido' };
     }
   };
 
-  const logout = async () => {
+  // ----------------------------------------------------------
+  // Registro de nuevo usuario (rol Client por defecto)
+  // ----------------------------------------------------------
+  const signUp = async (email, password, firstName, lastName, phoneNumber) => {
+    console.log('[AUTH] signUp intentando con:', email);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            phone_number: phoneNumber,
+          },
+        },
+      });
+
+      if (error) {
+        console.error('[AUTH] signUp error:', error.message);
+        return { success: false, error: error.message };
+      }
+
+      console.log('[AUTH] signUp OK:', data.user?.email);
+      return { success: true, data };
+    } catch (err) {
+      console.error('[AUTH] signUp excepción:', err);
+      return { success: false, error: err.message || 'Error desconocido' };
+    }
+  };
+
+  // ----------------------------------------------------------
+  // Cerrar sesión
+  // ----------------------------------------------------------
+  const signOut = async () => {
+    console.log('[AUTH] signOut');
     try {
       await supabase.auth.signOut();
     } catch (err) {
-      console.error('Error en logout:', err);
-    } finally {
-      setUser(null);
-      setProfile(null);
-      // Limpiar todo el storage
-      localStorage.removeItem('sb-acpmwvhttzteobvmkrca-auth-token');
+      console.error('[AUTH] signOut error:', err);
+    }
+    setUser(null);
+    setProfile(null);
+    // Forzar limpieza total por si quedó algo
+    try {
+      localStorage.removeItem(SUPABASE_AUTH_KEY);
+    } catch {}
+  };
+
+  // ----------------------------------------------------------
+  // Reintentar carga de perfil (útil desde UI si falló)
+  // ----------------------------------------------------------
+  const refreshProfile = async () => {
+    if (user) {
+      await loadProfile(user);
     }
   };
 
+  // ----------------------------------------------------------
+  // Helpers de rol
+  // ----------------------------------------------------------
+  const hasRole = (roleName) => {
+    return profile?.roles?.includes(roleName) ?? false;
+  };
+
+  const isAdmin = hasRole('Admin') || hasRole('SuperAdmin');
+  const isProfessional = hasRole('Professional');
+  const isClient = hasRole('Client');
+
+  // ----------------------------------------------------------
+  // Valor del contexto
+  // ----------------------------------------------------------
   const value = {
     user,
     profile,
     loading,
-    error,
-    login,
-    logout,
     isAuthenticated: !!user,
-    isAdmin: profile?.roles?.includes('Admin') || profile?.roles?.includes('SuperAdmin'),
-    isProfessional: profile?.roles?.includes('Professional'),
-    isClient: profile?.roles?.includes('Client'),
+    isAdmin,
+    isProfessional,
+    isClient,
+    hasRole,
+    signIn,
+    signUp,
+    signOut,
+    refreshProfile,
   };
 
   return (
