@@ -1,55 +1,54 @@
-// ═══════════════════════════════════════════════════════════════
-// src/components/auth/ProtectedRoute.jsx
-// Proteccion de rutas con manejo robusto de loading
-// ═══════════════════════════════════════════════════════════════
+// ============================================================
+// ProtectedRoute.jsx - NEXOVA AgendaPro
+// Protege rutas que requieren autenticación y/o rol específico
+// - Maneja loading con spinner + timeout visual
+// - Redirige a /login si no hay sesión
+// - Redirige a /no-autorizado si el rol no coincide
+// ============================================================
 
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
-export function ProtectedRoute({ children, allowedRoles = [] }) {
-  const { user, profile, loading } = useAuth();
+export default function ProtectedRoute({ children, requiredRoles = [] }) {
+  const { isAuthenticated, loading, hasRole, profile } = useAuth();
+  const location = useLocation();
 
-  // Mostrar loading solo por maximo 5 segundos
+  // Mientras se verifica la sesión, mostrar spinner
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#F4F6F8]">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-gray-500">Cargando...</p>
+          {/* Spinner NEXOVA */}
+          <div className="inline-block w-12 h-12 border-4 border-[#0F766E]/20 border-t-[#0F766E] rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm text-slate-600 font-medium" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+            Verificando sesión...
+          </p>
+          <p className="mt-2 text-xs text-slate-400">
+            Si esto demora más de 10 segundos, recarga la página (F5)
+          </p>
         </div>
       </div>
     );
   }
 
-  // Si no hay usuario, redirigir al login
-  if (!user) {
+  // No autenticado -> login
+  if (!isAuthenticated) {
+    console.log('[PROTECTED] No autenticado, redirigiendo a /login');
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Autenticado pero perfil aún no cargado (caso raro)
+  if (!profile) {
+    console.warn('[PROTECTED] Autenticado pero sin perfil. Redirigiendo a login.');
     return <Navigate to="/login" replace />;
   }
 
-  // Verificar roles si se especificaron
-  if (allowedRoles.length > 0 && profile) {
-    const userRoles = profile.roles || [];
-    const hasAccess = allowedRoles.some(role => userRoles.includes(role));
-    if (!hasAccess) {
-      return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center max-w-sm">
-            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold text-slate-800 mb-2">Acceso no autorizado</h2>
-            <p className="text-sm text-gray-400 mb-6">No tiene los permisos necesarios para esta seccion.</p>
-            <button
-              onClick={() => window.location.href = '/login'}
-              className="px-6 py-2.5 bg-teal-600 text-white rounded-xl font-medium text-sm hover:bg-teal-700 transition-colors"
-            >
-              Volver
-            </button>
-          </div>
-        </div>
-      );
+  // Verificar roles si se especifican
+  if (requiredRoles.length > 0) {
+    const hasRequiredRole = requiredRoles.some((role) => hasRole(role));
+    if (!hasRequiredRole) {
+      console.warn('[PROTECTED] Rol insuficiente. Requiere:', requiredRoles, 'Tiene:', profile.roles);
+      return <Navigate to="/no-autorizado" replace />;
     }
   }
 
