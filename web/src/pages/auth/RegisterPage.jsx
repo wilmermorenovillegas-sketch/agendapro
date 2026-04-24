@@ -80,9 +80,24 @@ export default function RegisterPage() {
     fields.forEach((f) => validateField(f, formData[f]));
     if (fields.some((f) => !formData[f]?.trim()) || Object.keys(formErrors).length > 0) return;
 
-    const result = await signUp(formData);
-    if (result.success) navigate('/dashboard', { replace: true });
-  };
+    if (formData.password !== formData.confirmPassword) {
+          setFormErrors({ confirmPassword: 'Las contraseñas no coinciden' });
+          return;
+        }
+    
+        const result = await signUp(
+          formData.email,
+          formData.password,
+          formData.firstName,
+          formData.lastName,
+          formData.phoneNumber
+        );
+        if (result.success) {
+          navigate('/login', { replace: true, state: { message: 'Cuenta creada. Revisa tu correo para confirmar e inicia sesión.' } });
+        } else {
+          setFormErrors({ submit: result.error || 'No se pudo crear la cuenta' });
+        }
+      };
 
   const getPasswordStrength = (pw) => {
     let s = 0;
