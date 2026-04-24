@@ -1,15 +1,17 @@
 // ============================================================
 // LoginPage.jsx - NEXOVA AgendaPro
-// Página de login con:
-// - Botones de acceso rápido demo (Admin / Professional)
-// - Manejo de errores claro
-// - Redirección automática si ya está autenticado
-// - Branding NEXOVA (teal #0F766E, Sora, DM Sans)
+// VERSION: LOGIN-FIX-V2 (subido el 24/04/2026)
+// Pagina de login con:
+// - Botones de acceso rapido demo (Admin / Professional)
+// - Redireccion automatica si ya esta autenticado
+// - Marcador visible de version
 // ============================================================
 
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+
+console.log('%c[LOGIN-V2] LoginPage cargado - version LOGIN-FIX-V2', 'color:#0F766E;font-weight:bold;font-size:14px');
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,15 +24,13 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ----------------------------------------------------------
-  // Si ya está autenticado, redirigir según rol
-  // ----------------------------------------------------------
+  // Si ya esta autenticado, redirigir segun rol
   useEffect(() => {
     if (!loading && isAuthenticated && profile) {
       const from = location.state?.from?.pathname;
       const roles = profile.roles || [];
 
-      let target = '/admin/dashboard'; // default
+      let target = '/admin/dashboard';
 
       if (roles.includes('Admin') || roles.includes('SuperAdmin')) {
         target = from && from !== '/login' ? from : '/admin/dashboard';
@@ -40,20 +40,17 @@ export default function LoginPage() {
         target = '/';
       }
 
-      console.log('[LOGIN] Ya autenticado, redirigiendo a:', target);
+      console.log('[LOGIN-V2] Ya autenticado, redirigiendo a:', target);
       navigate(target, { replace: true });
     }
   }, [isAuthenticated, loading, profile, navigate, location]);
 
-  // ----------------------------------------------------------
-  // Submit del formulario
-  // ----------------------------------------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
     if (!email || !password) {
-      setErrorMsg('Por favor ingresa email y contraseña');
+      setErrorMsg('Por favor ingresa email y contrasena');
       return;
     }
 
@@ -62,23 +59,18 @@ export default function LoginPage() {
     setSubmitting(false);
 
     if (!result.success) {
-      // Traducir errores comunes de Supabase al español
-      let msg = result.error || 'Error al iniciar sesión';
+      let msg = result.error || 'Error al iniciar sesion';
       if (msg.includes('Invalid login credentials')) {
-        msg = 'Email o contraseña incorrectos';
+        msg = 'Email o contrasena incorrectos';
       } else if (msg.includes('Email not confirmed')) {
         msg = 'Email no confirmado. Revisa tu bandeja de entrada.';
       } else if (msg.toLowerCase().includes('network')) {
-        msg = 'Error de conexión. Verifica tu internet e intenta de nuevo.';
+        msg = 'Error de conexion. Verifica tu internet e intenta de nuevo.';
       }
       setErrorMsg(msg);
     }
-    // Si es success, el useEffect de arriba redirige automáticamente
   };
 
-  // ----------------------------------------------------------
-  // Botones de acceso rápido demo
-  // ----------------------------------------------------------
   const loginDemo = async (demoEmail, demoPassword) => {
     setEmail(demoEmail);
     setPassword(demoPassword);
@@ -89,18 +81,23 @@ export default function LoginPage() {
     setSubmitting(false);
 
     if (!result.success) {
-      setErrorMsg(result.error || 'Error al iniciar sesión demo');
+      setErrorMsg(result.error || 'Error al iniciar sesion demo');
     }
   };
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
+      className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
         fontFamily: 'DM Sans, sans-serif',
         background: 'linear-gradient(135deg, #F4F6F8 0%, #CCFBF1 100%)',
       }}
     >
+      {/* Badge de version en esquina superior derecha */}
+      <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-[#0F766E] text-white text-[10px] font-bold tracking-widest shadow-md">
+        LOGIN-FIX-V2
+      </div>
+
       <div className="w-full max-w-md">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
@@ -129,20 +126,18 @@ export default function LoginPage() {
             className="text-xl font-bold mb-1 text-slate-800"
             style={{ fontFamily: 'Sora, sans-serif' }}
           >
-            Iniciar sesión
+            Iniciar sesion
           </h2>
           <p className="text-sm text-slate-500 mb-6">
-            Accede a tu panel de gestión
+            Accede a tu panel de gestion
           </p>
 
-          {/* Error */}
           {errorMsg && (
             <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-              ⚠️ {errorMsg}
+              {errorMsg}
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">
@@ -161,14 +156,14 @@ export default function LoginPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">
-                CONTRASEÑA
+                CONTRASENA
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="********"
                   autoComplete="current-password"
                   disabled={submitting}
                   className="w-full px-4 py-2.5 pr-20 rounded-lg border border-slate-200 focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/20 focus:outline-none transition text-sm disabled:bg-slate-50"
@@ -231,16 +226,16 @@ export default function LoginPage() {
 
           {/* Link registro */}
           <p className="text-center mt-6 text-sm text-slate-500">
-            ¿No tienes cuenta?{' '}
+            No tienes cuenta?{' '}
             <Link to="/registro" className="font-semibold text-[#0F766E] hover:text-[#0D9488]">
-              Regístrate
+              Registrate
             </Link>
           </p>
         </div>
 
         {/* Footer */}
         <p className="text-center mt-6 text-xs text-slate-400">
-          © 2026 NEXOVA Software Empresarial · Lima, Perú
+          2026 NEXOVA Software Empresarial - Lima, Peru
         </p>
       </div>
     </div>
