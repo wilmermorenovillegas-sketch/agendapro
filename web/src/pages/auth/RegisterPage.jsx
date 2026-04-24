@@ -10,7 +10,7 @@ import { useAuth } from '../../hooks/useAuth';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { register, loading, error, clearError } = useAuth();
+  const { signUp, loading, error, clearError } = useAuth();
 
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -18,6 +18,7 @@ export default function RegisterPage() {
     password: '', confirmPassword: '', role: '', businessName: '', tenantId: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({});
 
   const validateField = (name, value) => {
@@ -79,7 +80,7 @@ export default function RegisterPage() {
     fields.forEach((f) => validateField(f, formData[f]));
     if (fields.some((f) => !formData[f]?.trim()) || Object.keys(formErrors).length > 0) return;
 
-    const result = await register(formData);
+    const result = await signUp(formData);
     if (result.success) navigate('/dashboard', { replace: true });
   };
 
@@ -239,9 +240,17 @@ export default function RegisterPage() {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-600 mb-1.5">Confirmar contraseña *</label>
-                <input name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange}
-                       placeholder="Repita su contraseña"
-                       className={`input-field ${formErrors.confirmPassword ? 'input-error' : ''}`} />
+                <div className="relative">
+                              <input name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={formData.confirmPassword} onChange={handleChange}
+                                     placeholder="Repita su contraseña"
+                                     className={`input-field pr-10 ${formErrors.confirmPassword ? 'input-error' : ''}`} />
+                              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                              </button>
+                            </div>
                 {formErrors.confirmPassword && <p className="mt-1 text-xs text-red-500">{formErrors.confirmPassword}</p>}
               </div>
 
