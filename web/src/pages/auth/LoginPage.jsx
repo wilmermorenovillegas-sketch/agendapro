@@ -1,17 +1,16 @@
 // ============================================================
 // LoginPage.jsx - NEXOVA AgendaPro
-// VERSION: LOGIN-FIX-V2 (subido el 24/04/2026)
-// Pagina de login con:
-// - Botones de acceso rapido demo (Admin / Professional)
-// - Redireccion automatica si ya esta autenticado
-// - Marcador visible de version
+// VERSION: LOGIN-FIX-V3 (24/04/2026)
+// - Un solo click en boton demo es suficiente
+// - Feedback claro durante el proceso
+// - Redireccion automatica via useEffect cuando se autentica
 // ============================================================
 
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
-console.log('%c[LOGIN-V2] LoginPage cargado - version LOGIN-FIX-V2', 'color:#0F766E;font-weight:bold;font-size:14px');
+console.log('%c[LOGIN-V3] LoginPage cargado', 'color:#0F766E;font-weight:bold;font-size:14px');
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -24,7 +23,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Si ya esta autenticado, redirigir segun rol
+  // Redireccion automatica cuando el usuario ya esta autenticado con perfil cargado
   useEffect(() => {
     if (!loading && isAuthenticated && profile) {
       const from = location.state?.from?.pathname;
@@ -40,7 +39,7 @@ export default function LoginPage() {
         target = '/';
       }
 
-      console.log('[LOGIN-V2] Ya autenticado, redirigiendo a:', target);
+      console.log('[LOGIN-V3] Autenticado, redirigiendo a:', target);
       navigate(target, { replace: true });
     }
   }, [isAuthenticated, loading, profile, navigate, location]);
@@ -56,19 +55,20 @@ export default function LoginPage() {
 
     setSubmitting(true);
     const result = await signIn(email.trim().toLowerCase(), password);
-    setSubmitting(false);
 
     if (!result.success) {
       let msg = result.error || 'Error al iniciar sesion';
       if (msg.includes('Invalid login credentials')) {
         msg = 'Email o contrasena incorrectos';
       } else if (msg.includes('Email not confirmed')) {
-        msg = 'Email no confirmado. Revisa tu bandeja de entrada.';
+        msg = 'Email no confirmado';
       } else if (msg.toLowerCase().includes('network')) {
-        msg = 'Error de conexion. Verifica tu internet e intenta de nuevo.';
+        msg = 'Error de conexion. Verifica tu internet.';
       }
       setErrorMsg(msg);
+      setSubmitting(false);
     }
+    // Si success, useEffect redirige automaticamente
   };
 
   const loginDemo = async (demoEmail, demoPassword) => {
@@ -78,12 +78,27 @@ export default function LoginPage() {
     setSubmitting(true);
 
     const result = await signIn(demoEmail, demoPassword);
-    setSubmitting(false);
 
     if (!result.success) {
       setErrorMsg(result.error || 'Error al iniciar sesion demo');
+      setSubmitting(false);
     }
+    // Si success, useEffect redirige automaticamente
   };
+
+  // Mientras se verifica la sesion inicial, no mostrar el formulario
+  // (evita que el usuario vea el login un instante antes de redirigirse)
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center"
+           style={{ background: 'linear-gradient(135deg, #F4F6F8 0%, #CCFBF1 100%)' }}>
+        <div className="text-center">
+          <div className="inline-block w-12 h-12 border-4 border-[#0F766E]/20 border-t-[#0F766E] rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm text-slate-600 font-medium">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -93,13 +108,12 @@ export default function LoginPage() {
         background: 'linear-gradient(135deg, #F4F6F8 0%, #CCFBF1 100%)',
       }}
     >
-      {/* Badge de version en esquina superior derecha */}
       <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-[#0F766E] text-white text-[10px] font-bold tracking-widest shadow-md">
-        LOGIN-FIX-V2
+        LOGIN-FIX-V3
       </div>
 
       <div className="w-full max-w-md">
-        {/* Logo / Brand */}
+        {/* Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg"
                style={{ background: 'linear-gradient(135deg, #0F766E, #0D9488)' }}>
@@ -109,10 +123,8 @@ export default function LoginPage() {
               <line x1="52" y1="26" x2="52" y2="56" stroke="white" strokeWidth="5" strokeLinecap="round"/>
             </svg>
           </div>
-          <h1
-            className="text-3xl font-extrabold tracking-widest"
-            style={{ fontFamily: 'Sora, sans-serif', color: '#0F766E' }}
-          >
+          <h1 className="text-3xl font-extrabold tracking-widest"
+              style={{ fontFamily: 'Sora, sans-serif', color: '#0F766E' }}>
             AGENDAPRO
           </h1>
           <p className="text-xs text-slate-500 mt-1 tracking-widest font-semibold">
@@ -122,10 +134,8 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
-          <h2
-            className="text-xl font-bold mb-1 text-slate-800"
-            style={{ fontFamily: 'Sora, sans-serif' }}
-          >
+          <h2 className="text-xl font-bold mb-1 text-slate-800"
+              style={{ fontFamily: 'Sora, sans-serif' }}>
             Iniciar sesion
           </h2>
           <p className="text-sm text-slate-500 mb-6">
@@ -135,6 +145,13 @@ export default function LoginPage() {
           {errorMsg && (
             <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
               {errorMsg}
+            </div>
+          )}
+
+          {submitting && (
+            <div className="mb-4 p-3 rounded-lg bg-teal-50 border border-teal-200 text-teal-700 text-sm flex items-center gap-3">
+              <div className="w-4 h-4 border-2 border-teal-300 border-t-teal-700 rounded-full animate-spin"></div>
+              <span>Verificando credenciales y cargando perfil...</span>
             </div>
           )}
 
@@ -183,9 +200,7 @@ export default function LoginPage() {
               disabled={submitting}
               className="w-full py-3 rounded-lg font-bold text-white tracking-wide shadow-md hover:shadow-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
               style={{
-                background: submitting
-                  ? '#94A3B8'
-                  : 'linear-gradient(135deg, #0F766E, #0D9488)',
+                background: submitting ? '#94A3B8' : 'linear-gradient(135deg, #0F766E, #0D9488)',
                 fontFamily: 'Sora, sans-serif',
               }}
             >
@@ -193,16 +208,12 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="my-6 flex items-center gap-3">
             <div className="flex-1 h-px bg-slate-200"></div>
-            <span className="text-xs font-semibold text-slate-400 tracking-widest">
-              ACCESO DEMO
-            </span>
+            <span className="text-xs font-semibold text-slate-400 tracking-widest">ACCESO DEMO</span>
             <div className="flex-1 h-px bg-slate-200"></div>
           </div>
 
-          {/* Botones demo */}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -224,7 +235,6 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Link registro */}
           <p className="text-center mt-6 text-sm text-slate-500">
             No tienes cuenta?{' '}
             <Link to="/registro" className="font-semibold text-[#0F766E] hover:text-[#0D9488]">
@@ -233,7 +243,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Footer */}
         <p className="text-center mt-6 text-xs text-slate-400">
           2026 NEXOVA Software Empresarial - Lima, Peru
         </p>
