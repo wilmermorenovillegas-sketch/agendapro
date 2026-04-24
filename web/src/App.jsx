@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/auth/ProtectedRoute';import LoginPage from './pages/auth/LoginPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import AdminLayout from './components/common/AdminLayout';
 import DashboardPage from './pages/admin/DashboardPage';
@@ -13,6 +14,7 @@ import AppointmentsPage from './pages/admin/AppointmentsPage';
 import PerformancePage from './pages/admin/PerformancePage';
 import ReportsPage from './pages/admin/ReportsPage';
 import ChatPage from './pages/admin/ChatPage';
+import UsersPage from './pages/admin/UsersPage';
 
 export default function App() {
   return (
@@ -34,6 +36,7 @@ export default function App() {
             <Route path="services" element={<ServicesPage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="appointments" element={<AppointmentsPage />} />
+            <Route path="users" element={<UsersPage />} />
             <Route path="performance" element={<PerformancePage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="chat" element={<ChatPage />} />
