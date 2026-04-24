@@ -1,11 +1,9 @@
 // ============================================================
 // AuthContext.jsx - NEXOVA AgendaPro
-// VERSION: LOGIN-FIX-V2 (subido el 24/04/2026)
-// Contexto de autenticacion BLINDADO
-// - Timeout duro de 6s (evita cargando infinito)
-// - Auto-limpieza de sesion corrupta
-// - Logs claros en consola (prefijo [AUTH-V2])
-// - Perfil fallback si get_my_profile falla
+// VERSION: LOGIN-FIX-V3 (24/04/2026) - CORRIGE 3 BUGS:
+// 1. Ya no requiere 3 clicks para entrar (elimina doble loadProfile)
+// 2. signOut ahora redirige a /login correctamente
+// 3. Expone displayRole para que AdminLayout sepa qué mostrar
 // ============================================================
 
 import { createContext, useState, useEffect, useCallback } from 'react';
@@ -13,21 +11,18 @@ import { supabase } from '../lib/supabase';
 
 export const AuthContext = createContext(null);
 
-// Marcador unico que nos permite verificar si el archivo nuevo esta en produccion
-console.log('%c[AUTH-V2] AuthContext cargado - version LOGIN-FIX-V2', 'color:#0F766E;font-weight:bold;font-size:14px');
+console.log('%c[AUTH-V3] AuthContext cargado - version LOGIN-FIX-V3', 'color:#0F766E;font-weight:bold;font-size:14px');
 
-// Clave del item de Supabase en localStorage (para limpiar si hay corrupcion)
 const SUPABASE_AUTH_KEY = 'sb-acpmwvhttzteobvmkrca-auth-token';
 
-// Helper: limpia toda la sesion local
 const hardReset = () => {
-  console.warn('[AUTH-V2] Ejecutando hardReset: limpiando localStorage');
+  console.warn('[AUTH-V3] hardReset: limpiando storage');
   try {
     localStorage.removeItem(SUPABASE_AUTH_KEY);
     localStorage.clear();
     sessionStorage.clear();
   } catch (e) {
-    console.error('[AUTH-V2] Error limpiando storage:', e);
+    console.error('[AUTH-V3] Error limpiando storage:', e);
   }
 };
 
@@ -37,16 +32,15 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   // ----------------------------------------------------------
-  // Carga el perfil del usuario via RPC get_my_profile()
+  // Carga el perfil via RPC get_my_profile()
   // ----------------------------------------------------------
   const loadProfile = useCallback(async (authUser) => {
     if (!authUser) {
-      console.log('[AUTH-V2] loadProfile: no hay authUser');
       setProfile(null);
       return null;
     }
 
-    console.log('[AUTH-V2] loadProfile: llamando RPC para', authUser.email);
+    console.log('[AUTH-V3] loadProfile para:', authUser.email);
 
     try {
       const rpcPromise = supabase.rpc('get_my_profile');
@@ -56,29 +50,22 @@ export function AuthProvider({ children }) {
 
       const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
 
-      if (error) {
-        console.error('[AUTH-V2] RPC error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       let parsedData = data;
       if (typeof data === 'string') {
-        try {
-          parsedData = JSON.parse(data);
-        } catch {
-          parsedData = null;
-        }
+        try { parsedData = JSON.parse(data); } catch { parsedData = null; }
       }
 
       if (parsedData) {
-        console.log('[AUTH-V2] Perfil OK:', parsedData.email, 'roles:', parsedData.roles);
+        console.log('[AUTH-V3] Perfil OK:', parsedData.email, 'roles:', parsedData.roles);
         setProfile(parsedData);
         return parsedData;
       }
 
       throw new Error('RPC devolvio null');
     } catch (err) {
-      console.warn('[AUTH-V2] loadProfile fallo, usando fallback:', err.message);
+      console.warn('[AUTH-V3] loadProfile fallo, fallback:', err.message);
 
       const fallbackProfile = {
         id: authUser.id,
@@ -95,64 +82,56 @@ export function AuthProvider({ children }) {
         is_active: true,
         roles: ['Client'],
       };
-
       setProfile(fallbackProfile);
       return fallbackProfile;
     }
   }, []);
 
   // ----------------------------------------------------------
-  // Inicializacion: TIMEOUT DURO de 6s
+  // Inicializacion con timeout duro de 6s
+  // IMPORTANTE: solo inicializa una vez. onAuthStateChange
+  // se encarga de los cambios posteriores (login / logout).
   // ----------------------------------------------------------
   useEffect(() => {
     let isMounted = true;
     let forcedTimeout = null;
 
-    console.log('[AUTH-V2] Inicializando...');
+    console.log('[AUTH-V3] Inicializando...');
 
     forcedTimeout = setTimeout(() => {
       if (isMounted) {
-        console.error('[AUTH-V2] TIMEOUT 6s alcanzado. Forzando loading=false');
+        console.error('[AUTH-V3] TIMEOUT 6s. Forzando loading=false');
         setLoading(false);
       }
     }, 6000);
 
     const initAuth = async () => {
       try {
-        console.log('[AUTH-V2] Obteniendo sesion actual...');
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
-          console.error('[AUTH-V2] Error getSession:', error);
+          console.error('[AUTH-V3] Error getSession:', error);
           hardReset();
-          if (isMounted) {
-            setUser(null);
-            setProfile(null);
-            setLoading(false);
-          }
+          if (isMounted) { setUser(null); setProfile(null); setLoading(false); }
           return;
         }
 
         if (session?.user) {
-          console.log('[AUTH-V2] Sesion encontrada:', session.user.email);
-          if (isMounted) setUser(session.user);
-          await loadProfile(session.user);
-        } else {
-          console.log('[AUTH-V2] No hay sesion activa');
+          console.log('[AUTH-V3] Sesion encontrada:', session.user.email);
           if (isMounted) {
-            setUser(null);
-            setProfile(null);
+            setUser(session.user);
+            await loadProfile(session.user);
           }
+        } else {
+          console.log('[AUTH-V3] No hay sesion activa');
+          if (isMounted) { setUser(null); setProfile(null); }
         }
       } catch (err) {
-        console.error('[AUTH-V2] Error en initAuth:', err);
-        if (isMounted) {
-          setUser(null);
-          setProfile(null);
-        }
+        console.error('[AUTH-V3] Error en initAuth:', err);
+        if (isMounted) { setUser(null); setProfile(null); }
       } finally {
         if (isMounted) {
-          console.log('[AUTH-V2] initAuth terminado, loading=false');
+          console.log('[AUTH-V3] initAuth terminado');
           setLoading(false);
           clearTimeout(forcedTimeout);
         }
@@ -161,18 +140,21 @@ export function AuthProvider({ children }) {
 
     initAuth();
 
+    // onAuthStateChange: unico lugar donde se manejan cambios posteriores
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[AUTH-V2] onAuthStateChange:', event, session?.user?.email || '(sin user)');
+        console.log('[AUTH-V3] onAuthStateChange:', event, session?.user?.email || '(sin user)');
 
         if (!isMounted) return;
 
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (event === 'SIGNED_IN') {
           if (session?.user) {
             setUser(session.user);
             await loadProfile(session.user);
             setLoading(false);
           }
+        } else if (event === 'TOKEN_REFRESHED') {
+          if (session?.user) setUser(session.user);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setProfile(null);
@@ -189,11 +171,11 @@ export function AuthProvider({ children }) {
   }, [loadProfile]);
 
   // ----------------------------------------------------------
-  // Login con email + password
+  // signIn - SOLO llama al API de Supabase.
+  // onAuthStateChange se encarga del resto (evita doble carga).
   // ----------------------------------------------------------
   const signIn = async (email, password) => {
-    console.log('[AUTH-V2] signIn intentando con:', email);
-    setLoading(true);
+    console.log('[AUTH-V3] signIn:', email);
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -202,31 +184,20 @@ export function AuthProvider({ children }) {
       });
 
       if (error) {
-        console.error('[AUTH-V2] signIn error:', error.message);
-        setLoading(false);
+        console.error('[AUTH-V3] signIn error:', error.message);
         return { success: false, error: error.message };
       }
 
-      console.log('[AUTH-V2] signIn OK:', data.user?.email);
-      if (data.user) {
-        setUser(data.user);
-        await loadProfile(data.user);
-      }
-      setLoading(false);
+      console.log('[AUTH-V3] signIn OK para:', data.user?.email);
+      // NO seteamos user/profile aqui. Lo hara onAuthStateChange.
       return { success: true, data };
     } catch (err) {
-      console.error('[AUTH-V2] signIn excepcion:', err);
-      setLoading(false);
+      console.error('[AUTH-V3] signIn excepcion:', err);
       return { success: false, error: err.message || 'Error desconocido' };
     }
   };
 
-  // ----------------------------------------------------------
-  // Registro
-  // ----------------------------------------------------------
   const signUp = async (email, password, firstName, lastName, phoneNumber) => {
-    console.log('[AUTH-V2] signUp:', email);
-
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -240,51 +211,56 @@ export function AuthProvider({ children }) {
         },
       });
 
-      if (error) {
-        console.error('[AUTH-V2] signUp error:', error.message);
-        return { success: false, error: error.message };
-      }
-
+      if (error) return { success: false, error: error.message };
       return { success: true, data };
     } catch (err) {
-      console.error('[AUTH-V2] signUp excepcion:', err);
       return { success: false, error: err.message || 'Error desconocido' };
     }
   };
 
   // ----------------------------------------------------------
-  // Cerrar sesion
+  // signOut - ahora redirige forzadamente a /login
   // ----------------------------------------------------------
   const signOut = async () => {
-    console.log('[AUTH-V2] signOut');
+    console.log('[AUTH-V3] signOut iniciado');
     try {
       await supabase.auth.signOut();
     } catch (err) {
-      console.error('[AUTH-V2] signOut error:', err);
+      console.error('[AUTH-V3] signOut error:', err);
     }
     setUser(null);
     setProfile(null);
     try {
       localStorage.removeItem(SUPABASE_AUTH_KEY);
     } catch {}
+    // Redireccion forzada (garantiza que el usuario sale)
+    console.log('[AUTH-V3] Redirigiendo a /login');
+    window.location.href = '/login';
   };
 
   const refreshProfile = async () => {
-    if (user) {
-      await loadProfile(user);
-    }
+    if (user) await loadProfile(user);
   };
 
   // ----------------------------------------------------------
   // Helpers de rol
   // ----------------------------------------------------------
-  const hasRole = (roleName) => {
-    return profile?.roles?.includes(roleName) ?? false;
-  };
+  const hasRole = (roleName) => profile?.roles?.includes(roleName) ?? false;
 
   const isAdmin = hasRole('Admin') || hasRole('SuperAdmin');
   const isProfessional = hasRole('Professional');
   const isClient = hasRole('Client');
+
+  // displayRole - texto amigable para mostrar en UI
+  const displayRole = (() => {
+    if (!profile?.roles || profile.roles.length === 0) return 'Usuario';
+    const r = profile.roles[0];
+    if (r === 'SuperAdmin') return 'Super Administrador';
+    if (r === 'Admin') return 'Administrador';
+    if (r === 'Professional') return 'Profesional';
+    if (r === 'Client') return 'Cliente';
+    return r;
+  })();
 
   const value = {
     user,
@@ -294,6 +270,7 @@ export function AuthProvider({ children }) {
     isAdmin,
     isProfessional,
     isClient,
+    displayRole,
     hasRole,
     signIn,
     signUp,
