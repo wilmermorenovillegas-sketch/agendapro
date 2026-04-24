@@ -1,9 +1,10 @@
 // ============================================================
 // AuthContext.jsx - NEXOVA AgendaPro
-// Contexto de autenticación BLINDADO
+// VERSION: LOGIN-FIX-V2 (subido el 24/04/2026)
+// Contexto de autenticacion BLINDADO
 // - Timeout duro de 6s (evita cargando infinito)
-// - Auto-limpieza de sesión corrupta
-// - Logs claros en consola (prefijo [AUTH])
+// - Auto-limpieza de sesion corrupta
+// - Logs claros en consola (prefijo [AUTH-V2])
 // - Perfil fallback si get_my_profile falla
 // ============================================================
 
@@ -12,18 +13,21 @@ import { supabase } from '../lib/supabase';
 
 export const AuthContext = createContext(null);
 
-// Clave del item de Supabase en localStorage (para limpiar si hay corrupción)
+// Marcador unico que nos permite verificar si el archivo nuevo esta en produccion
+console.log('%c[AUTH-V2] AuthContext cargado - version LOGIN-FIX-V2', 'color:#0F766E;font-weight:bold;font-size:14px');
+
+// Clave del item de Supabase en localStorage (para limpiar si hay corrupcion)
 const SUPABASE_AUTH_KEY = 'sb-acpmwvhttzteobvmkrca-auth-token';
 
-// Helper: limpia toda la sesión local y recarga
+// Helper: limpia toda la sesion local
 const hardReset = () => {
-  console.warn('[AUTH] Ejecutando hardReset: limpiando localStorage y recargando');
+  console.warn('[AUTH-V2] Ejecutando hardReset: limpiando localStorage');
   try {
     localStorage.removeItem(SUPABASE_AUTH_KEY);
     localStorage.clear();
     sessionStorage.clear();
   } catch (e) {
-    console.error('[AUTH] Error limpiando storage:', e);
+    console.error('[AUTH-V2] Error limpiando storage:', e);
   }
 };
 
@@ -33,20 +37,18 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   // ----------------------------------------------------------
-  // Carga el perfil del usuario vía RPC get_my_profile()
-  // Si falla, devuelve perfil mínimo para no bloquear la app
+  // Carga el perfil del usuario via RPC get_my_profile()
   // ----------------------------------------------------------
   const loadProfile = useCallback(async (authUser) => {
     if (!authUser) {
-      console.log('[AUTH] loadProfile: no hay authUser, limpiando perfil');
+      console.log('[AUTH-V2] loadProfile: no hay authUser');
       setProfile(null);
       return null;
     }
 
-    console.log('[AUTH] loadProfile: llamando RPC get_my_profile para', authUser.email);
+    console.log('[AUTH-V2] loadProfile: llamando RPC para', authUser.email);
 
     try {
-      // Timeout de 5s para la llamada RPC (por si Supabase cuelga)
       const rpcPromise = supabase.rpc('get_my_profile');
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('RPC timeout 5s')), 5000)
@@ -55,11 +57,10 @@ export function AuthProvider({ children }) {
       const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
 
       if (error) {
-        console.error('[AUTH] RPC error:', error);
+        console.error('[AUTH-V2] RPC error:', error);
         throw error;
       }
 
-      // Parseo defensivo: a veces RPC devuelve string JSON
       let parsedData = data;
       if (typeof data === 'string') {
         try {
@@ -70,17 +71,15 @@ export function AuthProvider({ children }) {
       }
 
       if (parsedData) {
-        console.log('[AUTH] Perfil cargado OK:', parsedData.email, 'roles:', parsedData.roles);
+        console.log('[AUTH-V2] Perfil OK:', parsedData.email, 'roles:', parsedData.roles);
         setProfile(parsedData);
         return parsedData;
       }
 
-      // Si RPC devuelve null, usar perfil fallback
-      throw new Error('RPC devolvió null');
+      throw new Error('RPC devolvio null');
     } catch (err) {
-      console.warn('[AUTH] loadProfile falló, usando perfil fallback:', err.message);
+      console.warn('[AUTH-V2] loadProfile fallo, usando fallback:', err.message);
 
-      // Perfil mínimo de emergencia (usuario puede entrar con rol Client)
       const fallbackProfile = {
         id: authUser.id,
         email: authUser.email || '',
@@ -103,31 +102,28 @@ export function AuthProvider({ children }) {
   }, []);
 
   // ----------------------------------------------------------
-  // Inicialización: recupera sesión existente
-  // TIMEOUT DURO: si no termina en 6s, fuerza loading=false
+  // Inicializacion: TIMEOUT DURO de 6s
   // ----------------------------------------------------------
   useEffect(() => {
     let isMounted = true;
     let forcedTimeout = null;
 
-    console.log('[AUTH] Inicializando AuthContext...');
+    console.log('[AUTH-V2] Inicializando...');
 
-    // Timeout duro: a los 6s, si todavía loading, forzar salida
     forcedTimeout = setTimeout(() => {
       if (isMounted) {
-        console.error('[AUTH] TIMEOUT 6s alcanzado. Forzando loading=false');
+        console.error('[AUTH-V2] TIMEOUT 6s alcanzado. Forzando loading=false');
         setLoading(false);
       }
     }, 6000);
 
     const initAuth = async () => {
       try {
-        console.log('[AUTH] Obteniendo sesión actual...');
+        console.log('[AUTH-V2] Obteniendo sesion actual...');
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
-          console.error('[AUTH] Error getSession:', error);
-          // Si hay error de sesión, limpiar y permitir login fresco
+          console.error('[AUTH-V2] Error getSession:', error);
           hardReset();
           if (isMounted) {
             setUser(null);
@@ -138,25 +134,25 @@ export function AuthProvider({ children }) {
         }
 
         if (session?.user) {
-          console.log('[AUTH] Sesión encontrada para:', session.user.email);
+          console.log('[AUTH-V2] Sesion encontrada:', session.user.email);
           if (isMounted) setUser(session.user);
           await loadProfile(session.user);
         } else {
-          console.log('[AUTH] No hay sesión activa');
+          console.log('[AUTH-V2] No hay sesion activa');
           if (isMounted) {
             setUser(null);
             setProfile(null);
           }
         }
       } catch (err) {
-        console.error('[AUTH] Error en initAuth:', err);
+        console.error('[AUTH-V2] Error en initAuth:', err);
         if (isMounted) {
           setUser(null);
           setProfile(null);
         }
       } finally {
         if (isMounted) {
-          console.log('[AUTH] initAuth terminado, loading=false');
+          console.log('[AUTH-V2] initAuth terminado, loading=false');
           setLoading(false);
           clearTimeout(forcedTimeout);
         }
@@ -165,12 +161,9 @@ export function AuthProvider({ children }) {
 
     initAuth();
 
-    // ----------------------------------------------------------
-    // Suscripción a cambios de autenticación (login, logout, refresh)
-    // ----------------------------------------------------------
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[AUTH] onAuthStateChange:', event, session?.user?.email || '(sin user)');
+        console.log('[AUTH-V2] onAuthStateChange:', event, session?.user?.email || '(sin user)');
 
         if (!isMounted) return;
 
@@ -199,7 +192,7 @@ export function AuthProvider({ children }) {
   // Login con email + password
   // ----------------------------------------------------------
   const signIn = async (email, password) => {
-    console.log('[AUTH] signIn intentando con:', email);
+    console.log('[AUTH-V2] signIn intentando con:', email);
     setLoading(true);
 
     try {
@@ -209,14 +202,12 @@ export function AuthProvider({ children }) {
       });
 
       if (error) {
-        console.error('[AUTH] signIn error:', error.message);
+        console.error('[AUTH-V2] signIn error:', error.message);
         setLoading(false);
         return { success: false, error: error.message };
       }
 
-      console.log('[AUTH] signIn OK para:', data.user?.email);
-      // onAuthStateChange se encargará de setear user + profile + loading=false
-      // Pero por si no llega a tiempo, lo hacemos aquí también
+      console.log('[AUTH-V2] signIn OK:', data.user?.email);
       if (data.user) {
         setUser(data.user);
         await loadProfile(data.user);
@@ -224,17 +215,17 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return { success: true, data };
     } catch (err) {
-      console.error('[AUTH] signIn excepción:', err);
+      console.error('[AUTH-V2] signIn excepcion:', err);
       setLoading(false);
       return { success: false, error: err.message || 'Error desconocido' };
     }
   };
 
   // ----------------------------------------------------------
-  // Registro de nuevo usuario (rol Client por defecto)
+  // Registro
   // ----------------------------------------------------------
   const signUp = async (email, password, firstName, lastName, phoneNumber) => {
-    console.log('[AUTH] signUp intentando con:', email);
+    console.log('[AUTH-V2] signUp:', email);
 
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -250,39 +241,34 @@ export function AuthProvider({ children }) {
       });
 
       if (error) {
-        console.error('[AUTH] signUp error:', error.message);
+        console.error('[AUTH-V2] signUp error:', error.message);
         return { success: false, error: error.message };
       }
 
-      console.log('[AUTH] signUp OK:', data.user?.email);
       return { success: true, data };
     } catch (err) {
-      console.error('[AUTH] signUp excepción:', err);
+      console.error('[AUTH-V2] signUp excepcion:', err);
       return { success: false, error: err.message || 'Error desconocido' };
     }
   };
 
   // ----------------------------------------------------------
-  // Cerrar sesión
+  // Cerrar sesion
   // ----------------------------------------------------------
   const signOut = async () => {
-    console.log('[AUTH] signOut');
+    console.log('[AUTH-V2] signOut');
     try {
       await supabase.auth.signOut();
     } catch (err) {
-      console.error('[AUTH] signOut error:', err);
+      console.error('[AUTH-V2] signOut error:', err);
     }
     setUser(null);
     setProfile(null);
-    // Forzar limpieza total por si quedó algo
     try {
       localStorage.removeItem(SUPABASE_AUTH_KEY);
     } catch {}
   };
 
-  // ----------------------------------------------------------
-  // Reintentar carga de perfil (útil desde UI si falló)
-  // ----------------------------------------------------------
   const refreshProfile = async () => {
     if (user) {
       await loadProfile(user);
@@ -300,9 +286,6 @@ export function AuthProvider({ children }) {
   const isProfessional = hasRole('Professional');
   const isClient = hasRole('Client');
 
-  // ----------------------------------------------------------
-  // Valor del contexto
-  // ----------------------------------------------------------
   const value = {
     user,
     profile,
