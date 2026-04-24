@@ -1,179 +1,248 @@
-// ═══════════════════════════════════════════════════════════════
-// src/pages/auth/LoginPage.jsx
-// Login con usuarios demo para pruebas
-// ═══════════════════════════════════════════════════════════════
+// ============================================================
+// LoginPage.jsx - NEXOVA AgendaPro
+// Página de login con:
+// - Botones de acceso rápido demo (Admin / Professional)
+// - Manejo de errores claro
+// - Redirección automática si ya está autenticado
+// - Branding NEXOVA (teal #0F766E, Sora, DM Sans)
+// ============================================================
 
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-
-const DEMO_USERS = [
-  {
-    label: 'Administrador',
-    email: 'wilmermor07@gmail.com',
-    password: 'Donato12@',
-    role: 'Admin',
-    color: 'bg-teal-600',
-    icon: '\ud83d\udc51',
-    desc: 'Panel completo con todas las funciones',
-  },
-  {
-    label: 'Profesional',
-    email: 'wilmer.moreno2026@outlook.com',
-    password: 'Donato12@',
-    role: 'Professional',
-    color: 'bg-blue-600',
-    icon: '\ud83d\udc68\u200d\u2695\ufe0f',
-    desc: 'Vista de citas y calendario asignado',
-  },
-];
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
+  const { signIn, isAuthenticated, loading, profile } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // ----------------------------------------------------------
+  // Si ya está autenticado, redirigir según rol
+  // ----------------------------------------------------------
+  useEffect(() => {
+    if (!loading && isAuthenticated && profile) {
+      const from = location.state?.from?.pathname;
+      const roles = profile.roles || [];
+
+      let target = '/admin/dashboard'; // default
+
+      if (roles.includes('Admin') || roles.includes('SuperAdmin')) {
+        target = from && from !== '/login' ? from : '/admin/dashboard';
+      } else if (roles.includes('Professional')) {
+        target = '/admin/appointments';
+      } else if (roles.includes('Client')) {
+        target = '/';
+      }
+
+      console.log('[LOGIN] Ya autenticado, redirigiendo a:', target);
+      navigate(target, { replace: true });
+    }
+  }, [isAuthenticated, loading, profile, navigate, location]);
+
+  // ----------------------------------------------------------
+  // Submit del formulario
+  // ----------------------------------------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email.trim() || !password) {
-      setError('Ingrese su correo y contrasena.');
+    setErrorMsg('');
+
+    if (!email || !password) {
+      setErrorMsg('Por favor ingresa email y contraseña');
       return;
     }
-    setLoading(true);
-    setError('');
-    try {
-      await login(email, password);
-      navigate('/admin/dashboard');
-    } catch (err) {
-      setError(err.message || 'Error al iniciar sesion');
-    } finally {
-      setLoading(false);
+
+    setSubmitting(true);
+    const result = await signIn(email.trim().toLowerCase(), password);
+    setSubmitting(false);
+
+    if (!result.success) {
+      // Traducir errores comunes de Supabase al español
+      let msg = result.error || 'Error al iniciar sesión';
+      if (msg.includes('Invalid login credentials')) {
+        msg = 'Email o contraseña incorrectos';
+      } else if (msg.includes('Email not confirmed')) {
+        msg = 'Email no confirmado. Revisa tu bandeja de entrada.';
+      } else if (msg.toLowerCase().includes('network')) {
+        msg = 'Error de conexión. Verifica tu internet e intenta de nuevo.';
+      }
+      setErrorMsg(msg);
     }
+    // Si es success, el useEffect de arriba redirige automáticamente
   };
 
-  const handleDemoLogin = (demoUser) => {
-    setEmail(demoUser.email);
-    setPassword(demoUser.password);
-    setError('');
+  // ----------------------------------------------------------
+  // Botones de acceso rápido demo
+  // ----------------------------------------------------------
+  const loginDemo = async (demoEmail, demoPassword) => {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    setErrorMsg('');
+    setSubmitting(true);
+
+    const result = await signIn(demoEmail, demoPassword);
+    setSubmitting(false);
+
+    if (!result.success) {
+      setErrorMsg(result.error || 'Error al iniciar sesión demo');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-      {/* Logo */}
-      <div className="mb-6 text-center">
-        <div className="flex items-center justify-center mb-3">
-          <svg width="48" height="48" viewBox="0 0 80 80">
-            <polygon points="40,4 68,20 68,56 40,72 12,56 12,20" fill="none" stroke="#0F766E" strokeWidth="2" />
-            <circle cx="40" cy="4" r="3.5" fill="#0F766E" />
-            <circle cx="68" cy="20" r="3.5" fill="#0D9488" />
-            <circle cx="12" cy="56" r="3.5" fill="#0F766E" />
-            <line x1="28" y1="56" x2="28" y2="26" stroke="#0F766E" strokeWidth="3" strokeLinecap="round" />
-            <line x1="28" y1="26" x2="52" y2="56" stroke="#0F766E" strokeWidth="3" strokeLinecap="round" />
-            <line x1="52" y1="26" x2="52" y2="56" stroke="#0F766E" strokeWidth="3" strokeLinecap="round" />
-          </svg>
-        </div>
-        <h1 className="font-sora font-bold text-2xl text-slate-800 tracking-widest">NEXOVA</h1>
-      </div>
-
-      {/* Card de login */}
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-        <h2 className="text-2xl font-bold text-slate-800 font-sora mb-1">Iniciar Sesion</h2>
-        <p className="text-sm text-gray-400 mb-6">Ingrese sus credenciales para continuar</p>
-
-        {/* Usuarios demo */}
-        <div className="mb-6">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Acceso rapido (demo)</p>
-          <div className="flex gap-2">
-            {DEMO_USERS.map((du) => (
-              <button
-                key={du.role}
-                onClick={() => handleDemoLogin(du)}
-                className={'flex-1 p-3 rounded-xl border-2 transition-all text-left hover:shadow-md ' +
-                  (email === du.email ? 'border-teal-500 bg-teal-50' : 'border-gray-100 hover:border-gray-200')}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg">{du.icon}</span>
-                  <span className="text-sm font-bold text-slate-800">{du.label}</span>
-                </div>
-                <p className="text-[10px] text-gray-400 leading-tight">{du.desc}</p>
-              </button>
-            ))}
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        fontFamily: 'DM Sans, sans-serif',
+        background: 'linear-gradient(135deg, #F4F6F8 0%, #CCFBF1 100%)',
+      }}
+    >
+      <div className="w-full max-w-md">
+        {/* Logo / Brand */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg"
+               style={{ background: 'linear-gradient(135deg, #0F766E, #0D9488)' }}>
+            <svg width="36" height="36" viewBox="0 0 80 80">
+              <line x1="28" y1="56" x2="28" y2="26" stroke="white" strokeWidth="5" strokeLinecap="round"/>
+              <line x1="28" y1="26" x2="52" y2="56" stroke="white" strokeWidth="5" strokeLinecap="round"/>
+              <line x1="52" y1="26" x2="52" y2="56" stroke="white" strokeWidth="5" strokeLinecap="round"/>
+            </svg>
           </div>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
-            <span className="text-red-500 text-sm mt-0.5">!</span>
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        )}
-
-        {/* Formulario */}
-        <div onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Correo electronico</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="correo@ejemplo.com"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-            />
-          </div>
-
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium text-slate-700">Contrasena</label>
-            </div>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Su contrasena"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all pr-12"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {showPassword ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.879L21 21" />
-                  ) : (
-                    <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></>
-                  )}
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full py-3 bg-teal-600 text-white rounded-xl font-semibold text-sm hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          <h1
+            className="text-3xl font-extrabold tracking-widest"
+            style={{ fontFamily: 'Sora, sans-serif', color: '#0F766E' }}
           >
-            {loading ? (
-              <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Ingresando...</>
-            ) : 'Iniciar Sesion'}
-          </button>
-        </div>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-400">
-            No tiene cuenta? <Link to="/register" className="text-teal-600 font-semibold hover:underline">Registrese aqui</Link>
+            AGENDAPRO
+          </h1>
+          <p className="text-xs text-slate-500 mt-1 tracking-widest font-semibold">
+            POR NEXOVA SOFTWARE EMPRESARIAL
           </p>
         </div>
-      </div>
 
-      {/* Footer */}
-      <p className="mt-6 text-xs text-gray-400">2025 NEXOVA - Software Empresarial - Lima, Peru</p>
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+          <h2
+            className="text-xl font-bold mb-1 text-slate-800"
+            style={{ fontFamily: 'Sora, sans-serif' }}
+          >
+            Iniciar sesión
+          </h2>
+          <p className="text-sm text-slate-500 mb-6">
+            Accede a tu panel de gestión
+          </p>
+
+          {/* Error */}
+          {errorMsg && (
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+              ⚠️ {errorMsg}
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">
+                EMAIL
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@correo.com"
+                autoComplete="email"
+                disabled={submitting}
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/20 focus:outline-none transition text-sm disabled:bg-slate-50"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">
+                CONTRASEÑA
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  disabled={submitting}
+                  className="w-full px-4 py-2.5 pr-20 rounded-lg border border-slate-200 focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/20 focus:outline-none transition text-sm disabled:bg-slate-50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#0F766E] hover:text-[#0D9488]"
+                >
+                  {showPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full py-3 rounded-lg font-bold text-white tracking-wide shadow-md hover:shadow-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{
+                background: submitting
+                  ? '#94A3B8'
+                  : 'linear-gradient(135deg, #0F766E, #0D9488)',
+                fontFamily: 'Sora, sans-serif',
+              }}
+            >
+              {submitting ? 'INGRESANDO...' : 'INGRESAR'}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="my-6 flex items-center gap-3">
+            <div className="flex-1 h-px bg-slate-200"></div>
+            <span className="text-xs font-semibold text-slate-400 tracking-widest">
+              ACCESO DEMO
+            </span>
+            <div className="flex-1 h-px bg-slate-200"></div>
+          </div>
+
+          {/* Botones demo */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => loginDemo('wilmermor07@gmail.com', 'Donato12@')}
+              disabled={submitting}
+              className="py-2.5 rounded-lg text-xs font-bold tracking-wide border-2 border-[#0F766E] text-[#0F766E] hover:bg-[#0F766E] hover:text-white transition disabled:opacity-50"
+              style={{ fontFamily: 'Sora, sans-serif' }}
+            >
+              ADMIN
+            </button>
+            <button
+              type="button"
+              onClick={() => loginDemo('wilmer.moreno2026@outlook.com', 'Donato12@')}
+              disabled={submitting}
+              className="py-2.5 rounded-lg text-xs font-bold tracking-wide border-2 border-slate-600 text-slate-600 hover:bg-slate-600 hover:text-white transition disabled:opacity-50"
+              style={{ fontFamily: 'Sora, sans-serif' }}
+            >
+              PROFESIONAL
+            </button>
+          </div>
+
+          {/* Link registro */}
+          <p className="text-center mt-6 text-sm text-slate-500">
+            ¿No tienes cuenta?{' '}
+            <Link to="/registro" className="font-semibold text-[#0F766E] hover:text-[#0D9488]">
+              Regístrate
+            </Link>
+          </p>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center mt-6 text-xs text-slate-400">
+          © 2026 NEXOVA Software Empresarial · Lima, Perú
+        </p>
+      </div>
     </div>
   );
 }
