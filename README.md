@@ -116,3 +116,5 @@ App disponible en: http://localhost:5173
 
 **NEXOVA** · Jr. Álava 268, San Luis, Lima
 +51 949 287 897 · info@nexova.pe · [nexova.pe](https://nexova.pe)
+
+<!-- trigger redeploy -->
