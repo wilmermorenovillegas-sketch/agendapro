@@ -31,9 +31,6 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ----------------------------------------------------------
-  // Carga el perfil via RPC get_my_profile()
-  // ----------------------------------------------------------
   const loadProfile = useCallback(async (authUser) => {
     if (!authUser) {
       setProfile(null);
@@ -87,11 +84,6 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // ----------------------------------------------------------
-  // Inicializacion con timeout duro de 6s
-  // IMPORTANTE: solo inicializa una vez. onAuthStateChange
-  // se encarga de los cambios posteriores (login / logout).
-  // ----------------------------------------------------------
   useEffect(() => {
     let isMounted = true;
     let forcedTimeout = null;
@@ -140,7 +132,6 @@ export function AuthProvider({ children }) {
 
     initAuth();
 
-    // onAuthStateChange: unico lugar donde se manejan cambios posteriores
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('[AUTH-V3] onAuthStateChange:', event, session?.user?.email || '(sin user)');
@@ -170,10 +161,6 @@ export function AuthProvider({ children }) {
     };
   }, [loadProfile]);
 
-  // ----------------------------------------------------------
-  // signIn - SOLO llama al API de Supabase.
-  // onAuthStateChange se encarga del resto (evita doble carga).
-  // ----------------------------------------------------------
   const signIn = async (email, password) => {
     console.log('[AUTH-V3] signIn:', email);
 
@@ -189,7 +176,6 @@ export function AuthProvider({ children }) {
       }
 
       console.log('[AUTH-V3] signIn OK para:', data.user?.email);
-      // NO seteamos user/profile aqui. Lo hara onAuthStateChange.
       return { success: true, data };
     } catch (err) {
       console.error('[AUTH-V3] signIn excepcion:', err);
@@ -218,9 +204,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ----------------------------------------------------------
-  // signOut - ahora redirige forzadamente a /login
-  // ----------------------------------------------------------
   const signOut = async () => {
     console.log('[AUTH-V3] signOut iniciado');
     try {
@@ -233,7 +216,6 @@ export function AuthProvider({ children }) {
     try {
       localStorage.removeItem(SUPABASE_AUTH_KEY);
     } catch {}
-    // Redireccion forzada (garantiza que el usuario sale)
     console.log('[AUTH-V3] Redirigiendo a /login');
     window.location.href = '/login';
   };
@@ -242,16 +224,12 @@ export function AuthProvider({ children }) {
     if (user) await loadProfile(user);
   };
 
-  // ----------------------------------------------------------
-  // Helpers de rol
-  // ----------------------------------------------------------
   const hasRole = (roleName) => profile?.roles?.includes(roleName) ?? false;
 
   const isAdmin = hasRole('Admin') || hasRole('SuperAdmin');
   const isProfessional = hasRole('Professional');
   const isClient = hasRole('Client');
 
-  // displayRole - texto amigable para mostrar en UI
   const displayRole = (() => {
     if (!profile?.roles || profile.roles.length === 0) return 'Usuario';
     const r = profile.roles[0];
