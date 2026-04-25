@@ -37,6 +37,7 @@ export default function App() {
             <Route path="clients" element={<ClientsPage />} />
             <Route path="appointments" element={<AppointmentsPage />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="permissions" element={<PermissionsPage />} />
             <Route path="performance" element={<PerformancePage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="chat" element={<ChatPage />} />
