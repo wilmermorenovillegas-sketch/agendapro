@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { path: '/admin/clients', label: 'Clientes', icon: '👤' },
   { path: '/admin/appointments', label: 'Citas', icon: '📅' },
   { path: '/admin/users', label: 'Usuarios', icon: '🔑', adminOnly: true },
+  { path: '/admin/permissions', label: 'Permisos', icon: '🔐', adminOnly: true },
   { path: '/admin/performance', label: 'Rendimiento', icon: '🏆' },
   { path: '/admin/reports', label: 'Reportes & IA', icon: '🤖', adminOnly: true },
   { path: '/admin/chat', label: 'Chat', icon: '💬' },
