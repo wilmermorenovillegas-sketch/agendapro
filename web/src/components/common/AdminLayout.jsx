@@ -3,17 +3,17 @@ import { useAuth } from '../../hooks/useAuth';
 
 // Items del menu. El campo `adminOnly` marca los que solo ven Admin/SuperAdmin
 const NAV_ITEMS = [
-  { path: '/admin/dashboard', label: 'Dashboard', icon: '\ud83d\udcca' },
-  { path: '/admin/business', label: 'Mi Negocio', icon: '\ud83c\udfe2', adminOnly: true },
-  { path: '/admin/locations', label: 'Sedes', icon: '\ud83d\udccd', adminOnly: true },
-  { path: '/admin/professionals', label: 'Profesionales', icon: '\ud83d\udc65', adminOnly: true },
-  { path: '/admin/services', label: 'Servicios', icon: '\ud83d\udccb' },
-  { path: '/admin/clients', label: 'Clientes', icon: '\ud83d\udc64' },
-  { path: '/admin/appointments', label: 'Citas', icon: '\ud83d\udcc5' },
-  { path: '/admin/users', label: 'Usuarios', icon: '\ud83d\udd11', adminOnly: true },
-  { path: '/admin/performance', label: 'Rendimiento', icon: '\ud83c\udfc6' },
-  { path: '/admin/reports', label: 'Reportes & IA', icon: '\ud83e\udd16', adminOnly: true },
-  { path: '/admin/chat', label: 'Chat', icon: '\ud83d\udcac' },
+  { path: '/admin/dashboard', label: 'Dashboard', icon: '📊' },
+  { path: '/admin/business', label: 'Mi Negocio', icon: '🏢', adminOnly: true },
+  { path: '/admin/locations', label: 'Sedes', icon: '📍', adminOnly: true },
+  { path: '/admin/professionals', label: 'Profesionales', icon: '👥', adminOnly: true },
+  { path: '/admin/services', label: 'Servicios', icon: '📋' },
+  { path: '/admin/clients', label: 'Clientes', icon: '👤' },
+  { path: '/admin/appointments', label: 'Citas', icon: '📅' },
+  { path: '/admin/users', label: 'Usuarios', icon: '🔑', adminOnly: true },
+  { path: '/admin/performance', label: 'Rendimiento', icon: '🏆' },
+  { path: '/admin/reports', label: 'Reportes & IA', icon: '🤖', adminOnly: true },
+  { path: '/admin/chat', label: 'Chat', icon: '💬' },
 ];
 
 export default function AdminLayout() {
