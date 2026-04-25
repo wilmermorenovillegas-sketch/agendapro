@@ -15,7 +15,7 @@ import UsersPage from './pages/admin/UsersPage';
 import PerformancePage from './pages/admin/PerformancePage';
 import ReportsPage from './pages/admin/ReportsPage';
 import ChatPage from './pages/admin/ChatPage';
-
+import PermissionsPage from './pages/admin/PermissionsPage';
 export default function App() {
   return (
     <BrowserRouter>
