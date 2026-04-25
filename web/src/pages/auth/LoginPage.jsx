@@ -1,9 +1,6 @@
 // ============================================================
 // LoginPage.jsx - NEXOVA AgendaPro
 // VERSION: LOGIN-FIX-V3 (24/04/2026)
-// - Un solo click en boton demo es suficiente
-// - Feedback claro durante el proceso
-// - Redireccion automatica via useEffect cuando se autentica
 // ============================================================
 
 import { useState, useEffect } from 'react';
@@ -23,7 +20,6 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Redireccion automatica cuando el usuario ya esta autenticado con perfil cargado
   useEffect(() => {
     if (!loading && isAuthenticated && profile) {
       const from = location.state?.from?.pathname;
@@ -68,7 +64,6 @@ export default function LoginPage() {
       setErrorMsg(msg);
       setSubmitting(false);
     }
-    // Si success, useEffect redirige automaticamente
   };
 
   const loginDemo = async (demoEmail, demoPassword) => {
@@ -83,11 +78,8 @@ export default function LoginPage() {
       setErrorMsg(result.error || 'Error al iniciar sesion demo');
       setSubmitting(false);
     }
-    // Si success, useEffect redirige automaticamente
   };
 
-  // Mientras se verifica la sesion inicial, no mostrar el formulario
-  // (evita que el usuario vea el login un instante antes de redirigirse)
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center"
@@ -113,7 +105,6 @@ export default function LoginPage() {
       </div>
 
       <div className="w-full max-w-md">
-        {/* Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg"
                style={{ background: 'linear-gradient(135deg, #0F766E, #0D9488)' }}>
@@ -132,7 +123,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
           <h2 className="text-xl font-bold mb-1 text-slate-800"
               style={{ fontFamily: 'Sora, sans-serif' }}>
