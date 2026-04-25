@@ -11,10 +11,10 @@ import ProfessionalsPage from './pages/admin/ProfessionalsPage';
 import ServicesPage from './pages/admin/ServicesPage';
 import ClientsPage from './pages/admin/ClientsPage';
 import AppointmentsPage from './pages/admin/AppointmentsPage';
+import UsersPage from './pages/admin/UsersPage';
 import PerformancePage from './pages/admin/PerformancePage';
 import ReportsPage from './pages/admin/ReportsPage';
 import ChatPage from './pages/admin/ChatPage';
-import UsersPage from './pages/admin/UsersPage';
 
 export default function App() {
   return (
