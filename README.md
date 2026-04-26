@@ -118,3 +118,5 @@ App disponible en: http://localhost:5173
 +51 949 287 897 · info@nexova.pe · [nexova.pe](https://nexova.pe)
 
 <!-- trigger redeploy -->
+
+"trigger redeploy"
