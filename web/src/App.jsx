@@ -22,6 +22,9 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoginPage from './pages/auth/LoginPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
 
+// ─── Páginas públicas (reserva pública) ─────────────────────────
+import BookingPage from './pages/public/BookingPage';
+
 // ─── Páginas administrativas (módulos del sistema) ──────────────
 import DashboardPage         from './pages/admin/DashboardPage';
 import BusinessSettingsPage  from './pages/admin/BusinessSettingsPage';
@@ -50,6 +53,9 @@ export default function App() {
           {/* ════════ RUTAS PÚBLICAS ════════ */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/accept-invite/:token" element={<AcceptInvitePage />} />
+
+          {/* Reserva pública de citas (Phase 2.4) — sin auth */}
+          <Route path="/book/:tenantSlug" element={<BookingPage />} />
 
           {/* ════════ RUTAS PROTEGIDAS (panel admin) ════════ */}
           {/*
