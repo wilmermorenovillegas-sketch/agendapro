@@ -1,5 +1,15 @@
+// ═══════════════════════════════════════════════════════════════
 // pages/admin/TenantLimitsPage.jsx
 // Página para ver límites y uso del tenant
+//
+// FIX 26-04-2026: corregido bug del IconComponent no definido
+//   - Antes: el render usaba <IconComponent /> pero la función recibía
+//     el ícono en el parámetro `icon` (con minúscula). Resultado:
+//     ReferenceError que rompía toda la app.
+//   - Ahora: el ícono se asigna a una variable local con mayúscula
+//     inicial (requisito de React para renderizar componentes
+//     pasados como prop) y se usa esa variable.
+// ═══════════════════════════════════════════════════════════════
 
 import { useState, useEffect } from 'react';
 import { getTenantLimits } from '../../services/tenantLimitsService';
@@ -39,7 +49,17 @@ export default function TenantLimitsPage() {
     return { color: 'green', label: 'Normal', icon: CheckCircle };
   };
 
+  // ─────────────────────────────────────────────────────────────
+  // renderLimitCard
+  // Recibe `icon` como un componente de lucide-react (Users, Calendar, etc.)
+  // y lo asigna a `IconComponent` (mayúscula inicial obligatoria
+  // para que React lo trate como componente y no como string).
+  // ─────────────────────────────────────────────────────────────
   const renderLimitCard = (title, icon, current, max, unit = '') => {
+    // Asignar a variable con mayúscula inicial — React requiere esto
+    // para renderizar componentes pasados como props
+    const IconComponent = icon;
+
     const percentage = calculatePercentage(current, max);
     const status = getUsageStatus(percentage);
     const StatusIcon = status.icon;
