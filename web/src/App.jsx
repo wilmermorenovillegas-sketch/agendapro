@@ -26,7 +26,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          
+          <Route path="/accept-invite/:token" element={<AcceptInvitePage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/admin" element={
             <ProtectedRoute allowedRoles={['SuperAdmin', 'Admin']}>
@@ -39,6 +39,9 @@ export default function App() {
             <Route path="locations" element={<LocationsPage />} />
             <Route path="professionals" element={<ProfessionalsPage />} />
             <Route path="services" element={<ServicesPage />} />
+            <Route path="/admin/audit-logs" element={<AuditLogsPage />} />
+            <Route path="/admin/trash" element={<TrashPage />} />
+            <Route path="/admin/limits" element={<TenantLimitsPage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="appointments" element={<AppointmentsPage />} />
             <Route path="users" element={<UsersPage />} />
