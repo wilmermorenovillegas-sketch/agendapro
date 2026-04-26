@@ -1,60 +1,53 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/auth/ProtectedRoute';
-import LoginPage from './pages/auth/LoginPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import DashboardLayout from './components/DashboardLayout';
+
+// Pages
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import ClientsPage from './pages/ClientsPage';
+import ServicesPage from './pages/ServicesPage';
+import AppointmentsPage from './pages/AppointmentsPage';
+import UsersPage from './pages/admin/UsersPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
 import AuditLogsPage from './pages/admin/AuditLogsPage';
 import TrashPage from './pages/admin/TrashPage';
 import TenantLimitsPage from './pages/admin/TenantLimitsPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import AdminLayout from './components/common/AdminLayout';
-import DashboardPage from './pages/admin/DashboardPage';
-import BusinessSettingsPage from './pages/admin/BusinessSettingsPage';
-import LocationsPage from './pages/admin/LocationsPage';
-import ProfessionalsPage from './pages/admin/ProfessionalsPage';
-import ServicesPage from './pages/admin/ServicesPage';
-import ClientsPage from './pages/admin/ClientsPage';
-import AppointmentsPage from './pages/admin/AppointmentsPage';
-import UsersPage from './pages/admin/UsersPage';
-import PerformancePage from './pages/admin/PerformancePage';
-import ReportsPage from './pages/admin/ReportsPage';
-import ChatPage from './pages/admin/ChatPage';
-import PermissionsPage from './pages/admin/PermissionsPage';
-export default function App() {
+
+function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          {/* RUTAS PÚBLICAS */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/accept-invite/:token" element={<AcceptInvitePage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/admin" element={
-            <ProtectedRoute allowedRoles={['SuperAdmin', 'Admin']}>
-              <AdminLayout />
-            </ProtectedRoute>
-          }><Route path="/accept-invite/:token" element={<AcceptInvitePage />} />
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="business" element={<BusinessSettingsPage />} />
-            <Route path="locations" element={<LocationsPage />} />
-            <Route path="professionals" element={<ProfessionalsPage />} />
-            <Route path="services" element={<ServicesPage />} />
-            <Route path="/admin/audit-logs" element={<AuditLogsPage />} />
-            <Route path="/admin/trash" element={<TrashPage />} />
-            <Route path="/admin/limits" element={<TenantLimitsPage />} />
-            <Route path="clients" element={<ClientsPage />} />
-            <Route path="appointments" element={<AppointmentsPage />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="permissions" element={<PermissionsPage />} />
-            <Route path="performance" element={<PerformancePage />} />
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="chat" element={<ChatPage />} />
+          
+          {/* RUTAS PROTEGIDAS */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/admin" element={<DashboardLayout />}>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="clients" element={<ClientsPage />} />
+              <Route path="services" element={<ServicesPage />} />
+              <Route path="appointments" element={<AppointmentsPage />} />
+              <Route path="users" element={<UsersPage />} />
+              <Route path="audit-logs" element={<AuditLogsPage />} />
+              <Route path="trash" element={<TrashPage />} />
+              <Route path="limits" element={<TenantLimitsPage />} />
+            </Route>
           </Route>
-          <Route path="/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
+
+          {/* RUTA POR DEFECTO */}
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+        <Toaster position="top-right" />
       </AuthProvider>
     </BrowserRouter>
   );
 }
+
+export default App;
