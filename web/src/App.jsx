@@ -2,6 +2,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoginPage from './pages/auth/LoginPage';
+import AcceptInvitePage from './pages/AcceptInvitePage';
+import AuditLogsPage from './pages/admin/AuditLogsPage';
+import TrashPage from './pages/admin/TrashPage';
+import TenantLimitsPage from './pages/admin/TenantLimitsPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import AdminLayout from './components/common/AdminLayout';
 import DashboardPage from './pages/admin/DashboardPage';
@@ -22,12 +26,13 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/admin" element={
             <ProtectedRoute allowedRoles={['SuperAdmin', 'Admin']}>
               <AdminLayout />
             </ProtectedRoute>
-          }>
+          }><Route path="/accept-invite/:token" element={<AcceptInvitePage />} />
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="business" element={<BusinessSettingsPage />} />
