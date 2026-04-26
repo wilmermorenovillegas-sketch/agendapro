@@ -75,7 +75,7 @@ export default function TenantLimitsPage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-teal-100 rounded-lg">
-              <Icon className="w-6 h-6 text-teal-600" />
+              <IconComponent className="w-6 h-6 text-teal-600" />
             </div>
             <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
           </div>
