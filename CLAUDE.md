@@ -195,6 +195,25 @@ agendapro/
 
 ---
 
+## Flujo de trabajo con Git
+
+Trabajo solo y mi flujo es simple. Sigue estas reglas siempre:
+
+- **Trabaja siempre directamente en la rama `main`**. No hay PRs, no hay code review, no hay branches de feature.
+- **NO crees ramas nuevas** a menos que yo lo pida explícitamente.
+- **NO sugieras crear Pull Requests** — no los uso.
+- **NO uses la herramienta `gh`** (GitHub CLI). No es parte del flujo.
+- Cuando yo diga **"sube los cambios"**, ejecutas exactamente esto:
+  ```bash
+  git add .
+  git commit -m "mensaje descriptivo"
+  git push origin main
+  ```
+- **Vercel** se encarga del deploy automáticamente al hacer push a `main`.
+- Si yo no digo "sube los cambios", **solo haz commits locales** y avísame qué quedó pendiente de subir.
+
+---
+
 ## Aprendizajes técnicos importantes (no repetir errores pasados)
 
 - **Supabase SQL editor** corre como rol `postgres`, así que `auth.jwt()` devuelve NULL al probar manualmente. Es esperado.
