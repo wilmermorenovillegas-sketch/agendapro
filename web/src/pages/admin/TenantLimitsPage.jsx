@@ -39,7 +39,7 @@ export default function TenantLimitsPage() {
     return { color: 'green', label: 'Normal', icon: CheckCircle };
   };
 
-  const renderLimitCard = (title, icon: Icon, current, max, unit = '') => {
+  const renderLimitCard = (title, icon, current, max, unit = '') => {
     const percentage = calculatePercentage(current, max);
     const status = getUsageStatus(percentage);
     const StatusIcon = status.icon;
