@@ -1,10 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
+// ═══════════════════════════════════════════════════════════════
+// src/config/supabaseClient.js
+// Re-export del cliente oficial — VERSION RECOVERY-26-04-2026
+//
+// CONTEXTO:
+// Algunos archivos del proyecto importan desde aquí (config/supabaseClient)
+// y otros desde 'lib/supabase'. Para evitar tener DOS instancias del cliente
+// Supabase (lo que causa que la sesión se pierda entre archivos), este
+// archivo simplemente re-exporta la instancia oficial de lib/supabase.
+//
+// Resultado: todos los archivos comparten la MISMA sesión y el MISMO cliente.
+// ═══════════════════════════════════════════════════════════════
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export { supabase } from '../lib/supabase';
