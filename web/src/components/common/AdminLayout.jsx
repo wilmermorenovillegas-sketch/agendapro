@@ -1,20 +1,36 @@
+// ═══════════════════════════════════════════════════════════════
+// src/components/common/AdminLayout.jsx
+// Layout del panel administrativo — VERSION RECOVERY-26-04-2026
+//
+// Mantiene los 12 módulos originales y agrega los 3 nuevos de Phase 1.6:
+//   - Audit Logs (registro de acciones)
+//   - Papelera (soft-deleted records)
+//   - Límites (tenant limits / billing)
+// ═══════════════════════════════════════════════════════════════
+
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
-// Items del menu. El campo `adminOnly` marca los que solo ven Admin/SuperAdmin
+// Items del menú. El campo `adminOnly` marca los que solo ven Admin/SuperAdmin
 const NAV_ITEMS = [
-  { path: '/admin/dashboard', label: 'Dashboard', icon: '📊' },
-  { path: '/admin/business', label: 'Mi Negocio', icon: '🏢', adminOnly: true },
-  { path: '/admin/locations', label: 'Sedes', icon: '📍', adminOnly: true },
-  { path: '/admin/professionals', label: 'Profesionales', icon: '👥', adminOnly: true },
-  { path: '/admin/services', label: 'Servicios', icon: '📋' },
-  { path: '/admin/clients', label: 'Clientes', icon: '👤' },
-  { path: '/admin/appointments', label: 'Citas', icon: '📅' },
-  { path: '/admin/users', label: 'Usuarios', icon: '🔑', adminOnly: true },
-  { path: '/admin/permissions', label: 'Permisos', icon: '🔐', adminOnly: true },
-  { path: '/admin/performance', label: 'Rendimiento', icon: '🏆' },
-  { path: '/admin/reports', label: 'Reportes & IA', icon: '🤖', adminOnly: true },
-  { path: '/admin/chat', label: 'Chat', icon: '💬' },
+  // ─── Módulos principales (Phase 2) ───
+  { path: '/admin/dashboard',     label: 'Dashboard',      icon: '📊' },
+  { path: '/admin/business',      label: 'Mi Negocio',     icon: '🏢', adminOnly: true },
+  { path: '/admin/locations',     label: 'Sedes',          icon: '📍', adminOnly: true },
+  { path: '/admin/professionals', label: 'Profesionales',  icon: '👥', adminOnly: true },
+  { path: '/admin/services',      label: 'Servicios',      icon: '📋' },
+  { path: '/admin/clients',       label: 'Clientes',       icon: '👤' },
+  { path: '/admin/appointments',  label: 'Citas',          icon: '📅' },
+  { path: '/admin/users',         label: 'Usuarios',       icon: '🔑', adminOnly: true },
+  { path: '/admin/permissions',   label: 'Permisos',       icon: '🔐', adminOnly: true },
+  { path: '/admin/performance',   label: 'Rendimiento',    icon: '🏆' },
+  { path: '/admin/reports',       label: 'Reportes & IA',  icon: '🤖', adminOnly: true },
+  { path: '/admin/chat',          label: 'Chat',           icon: '💬' },
+
+  // ─── Módulos avanzados (Phase 1.6) ───
+  { path: '/admin/audit-logs',    label: 'Auditoría',      icon: '📜', adminOnly: true },
+  { path: '/admin/trash',         label: 'Papelera',       icon: '🗑️', adminOnly: true },
+  { path: '/admin/limits',        label: 'Límites',        icon: '📈', adminOnly: true },
 ];
 
 export default function AdminLayout() {
@@ -22,18 +38,20 @@ export default function AdminLayout() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    // signOut del AuthContext V3 ya redirige a /login automaticamente,
-    // pero dejamos el navigate por si acaso falla la redireccion forzada
+    // signOut del AuthContext V3 ya redirige a /login automáticamente,
+    // pero dejamos el navigate por si acaso falla la redirección forzada
     await signOut();
     navigate('/login');
   };
 
-  // Filtrar items segun rol
+  // Filtrar items según rol
   const visibleNavItems = NAV_ITEMS.filter(item => !item.adminOnly || isAdmin);
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
+      {/* ═══════════ SIDEBAR (DESKTOP) ═══════════ */}
       <aside className="hidden md:flex md:w-64 flex-col bg-white border-r border-gray-100">
+        {/* Header con logo */}
         <div className="p-5 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <svg width="32" height="32" viewBox="0 0 80 80">
@@ -51,6 +69,8 @@ export default function AdminLayout() {
             </div>
           </div>
         </div>
+
+        {/* Menú de navegación */}
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           {visibleNavItems.map((item) => (
             <NavLink key={item.path} to={item.path}
@@ -66,6 +86,8 @@ export default function AdminLayout() {
             </NavLink>
           ))}
         </nav>
+
+        {/* Footer del sidebar (perfil + logout) */}
         <div className="p-4 border-t border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center text-white text-xs font-bold">
@@ -80,7 +102,7 @@ export default function AdminLayout() {
               </div>
               <div className="text-[10px] text-gray-400 truncate">{profile?.tenant_name}</div>
             </div>
-            <button onClick={handleLogout} title="Cerrar sesion" className="text-gray-400 hover:text-red-500 transition-colors">
+            <button onClick={handleLogout} title="Cerrar sesión" className="text-gray-400 hover:text-red-500 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
@@ -88,7 +110,10 @@ export default function AdminLayout() {
           </div>
         </div>
       </aside>
+
+      {/* ═══════════ MAIN CONTENT ═══════════ */}
       <main className="flex-1 overflow-auto">
+        {/* Header móvil con menú scrollable */}
         <div className="md:hidden bg-white border-b border-gray-100 p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -114,6 +139,7 @@ export default function AdminLayout() {
             ))}
           </div>
         </div>
+
         <Outlet />
       </main>
     </div>
