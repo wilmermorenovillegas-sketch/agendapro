@@ -3,11 +3,12 @@
 // Pagina publica de reserva de citas — /book/:tenantSlug
 // No requiere autenticacion. Cualquiera con el link puede agendar.
 //
-// Flujo de 4 pasos:
-//   1) StepLocation       → elige sede
-//   2) StepProfessional   → elige profesional de esa sede
-//   3) StepService        → elige servicio del profesional
-//   4) StepDateTime       → calendario + slots + formulario + comprobante
+// Flujo de 5 pasos:
+//   1) StepLocation        → elige sede
+//   2) StepProfessional    → elige profesional de esa sede
+//   3) StepService         → elige servicio del profesional
+//   4) StepPaymentMethod   → Yape/Plin (con comprobante) o Pagar al llegar
+//   5) StepDateTime        → calendario + slots + formulario (+ comprobante condicional)
 //
 // Si todo es OK, muestra BookingSuccess.
 // ═══════════════════════════════════════════════════════════════
@@ -22,11 +23,12 @@ import publicBookingService from '../../services/publicBookingService';
 import StepLocation from '../../components/booking/StepLocation';
 import StepProfessional from '../../components/booking/StepProfessional';
 import StepService from '../../components/booking/StepService';
+import StepPaymentMethod from '../../components/booking/StepPaymentMethod';
 import StepDateTime from '../../components/booking/StepDateTime';
 import BookingSuccess from '../../components/booking/BookingSuccess';
 
 // ─── Constantes ──────────────────────────────────────────────────
-const STEP_LABELS = ['Sede', 'Profesional', 'Servicio', 'Fecha y hora'];
+const STEP_LABELS = ['Sede', 'Profesional', 'Servicio', 'Pago', 'Fecha y hora'];
 
 // ─── Componente principal ───────────────────────────────────────
 export default function BookingPage() {
@@ -39,11 +41,13 @@ export default function BookingPage() {
   const [locationsTree, setLocationsTree] = useState([]);
 
   // ─── Estado del flujo ─────────────────────────────────────────
-  // Paso actual 1..4
+  // Paso actual 1..5
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [selectedProfessional, setSelectedProfessional] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
+  // 'yape_plin' | 'pay_on_arrival' | null
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
   // ─── Estado de submit ─────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,7 +111,13 @@ export default function BookingPage() {
 
   const handleSelectService = (srv) => {
     setSelectedService(srv);
+    setSelectedPaymentMethod(null);
     setCurrentStep(4);
+  };
+
+  const handleSelectPaymentMethod = (method) => {
+    setSelectedPaymentMethod(method);
+    setCurrentStep(5);
   };
 
   const handleBack = () => {
@@ -115,6 +125,7 @@ export default function BookingPage() {
     if (currentStep === 2) setSelectedLocation(null);
     if (currentStep === 3) setSelectedProfessional(null);
     if (currentStep === 4) setSelectedService(null);
+    if (currentStep === 5) setSelectedPaymentMethod(null);
     setCurrentStep(currentStep - 1);
   };
 
@@ -139,6 +150,7 @@ export default function BookingPage() {
         client_phone: formData.client_phone,
         client_email: formData.client_email,
         start_time: formData.start_time,
+        payment_method: formData.payment_method || selectedPaymentMethod,
         payment_proof_url: formData.payment_proof_url,
       });
 
@@ -160,6 +172,7 @@ export default function BookingPage() {
     setSelectedLocation(null);
     setSelectedProfessional(null);
     setSelectedService(null);
+    setSelectedPaymentMethod(null);
     setCreatedAppointment(null);
     setCurrentStep(1);
   };
@@ -335,11 +348,20 @@ export default function BookingPage() {
           )}
 
           {currentStep === 4 && selectedService && (
+            <StepPaymentMethod
+              amount={Number(selectedService.price || 0)}
+              selectedMethod={selectedPaymentMethod}
+              onSelect={handleSelectPaymentMethod}
+            />
+          )}
+
+          {currentStep === 5 && selectedService && selectedPaymentMethod && (
             <StepDateTime
               tenantId={tenant.id}
               locationId={selectedLocation.id}
               professionalId={selectedProfessional.id}
               service={selectedService}
+              paymentMethod={selectedPaymentMethod}
               maxAdvanceDays={tenant.max_advance_booking_days || 30}
               onConfirm={handleConfirmBooking}
               isSubmitting={isSubmitting}

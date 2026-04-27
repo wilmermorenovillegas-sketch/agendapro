@@ -38,6 +38,7 @@ import PermissionsPage       from './pages/admin/PermissionsPage';
 import PerformancePage       from './pages/admin/PerformancePage';
 import ReportsPage           from './pages/admin/ReportsPage';
 import ChatPage              from './pages/admin/ChatPage';
+import PaymentsPage         from './pages/admin/PaymentsPage';
 
 // ─── Páginas administrativas Phase 1.6 ──────────────────────────
 import AuditLogsPage     from './pages/admin/AuditLogsPage';
@@ -79,6 +80,7 @@ export default function App() {
             <Route path="services"      element={<ServicesPage />} />
             <Route path="clients"       element={<ClientsPage />} />
             <Route path="appointments"  element={<AppointmentsPage />} />
+            <Route path="payments"      element={<PaymentsPage />} />
             <Route path="users"         element={<UsersPage />} />
             <Route path="permissions"   element={<PermissionsPage />} />
             <Route path="performance"   element={<PerformancePage />} />

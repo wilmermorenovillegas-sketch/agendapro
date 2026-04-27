@@ -58,7 +58,10 @@ export default function StepDateTime({
   maxAdvanceDays = 30,
   onConfirm,
   isSubmitting = false,
+  // 'yape_plin' | 'pay_on_arrival' — define si pedimos comprobante o no
+  paymentMethod = 'yape_plin',
 }) {
+  const requiresReceipt = paymentMethod === 'yape_plin';
   // ─── Estado del calendario ──────────────────────────────────
   const today = useMemo(() => makeDate(
     new Date().getFullYear(),
@@ -157,11 +160,12 @@ export default function StepDateTime({
   };
 
   // ─── Validacion final del formulario ────────────────────────
+  // Solo se exige comprobante si el metodo es Yape/Plin.
   const canSubmit =
     !!selectedSlot &&
     firstName.trim().length > 0 &&
     phone.trim().length >= 6 &&
-    !!paymentProofPath &&
+    (requiresReceipt ? !!paymentProofPath : true) &&
     !isSubmitting;
 
   const handleConfirm = () => {
@@ -173,7 +177,8 @@ export default function StepDateTime({
       client_email: email.trim(),
       start_time: selectedSlot.start_time,
       end_time: selectedSlot.end_time,
-      payment_proof_url: paymentProofPath,
+      payment_method: paymentMethod,
+      payment_proof_url: requiresReceipt ? paymentProofPath : null,
     });
   };
 
@@ -360,10 +365,21 @@ export default function StepDateTime({
           </div>
         </div>
 
-        <PaymentUpload
-          tenantId={tenantId}
-          onUploaded={(path) => setPaymentProofPath(path)}
-        />
+        {requiresReceipt ? (
+          <PaymentUpload
+            tenantId={tenantId}
+            onUploaded={(path) => setPaymentProofPath(path)}
+          />
+        ) : (
+          <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4">
+            <p className="text-sm font-sora font-medium text-teal-800">
+              Pagarás al llegar al local
+            </p>
+            <p className="text-xs text-teal-700/80 mt-1">
+              No necesitas adjuntar comprobante. Lleva efectivo o tarjeta el día de tu cita.
+            </p>
+          </div>
+        )}
 
         <button
           type="button"
