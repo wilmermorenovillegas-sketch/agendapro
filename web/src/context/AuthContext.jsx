@@ -74,6 +74,7 @@ export function AuthProvider({ children }) {
         tenant_name: '',
         tenant_logo: '',
         tenant_category: '',
+        tenant_slug: '',
         phone_number: '',
         profile_photo_url: null,
         is_active: true,

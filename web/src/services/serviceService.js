@@ -122,6 +122,17 @@ const serviceService = {
     }
   },
 
+  // Cuenta rápida de servicios activos del tenant (para detección de onboarding)
+  count: async () => {
+    const { count, error } = await supabase
+      .from('services')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_deleted', false)
+      .eq('is_active', true);
+    if (error) return 0;
+    return count || 0;
+  },
+
   remove: async (id) => {
     const { error } = await supabase
       .from('services')

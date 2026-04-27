@@ -78,6 +78,49 @@ const professionalService = {
       .eq('id', id);
     if (error) throw error;
   },
+
+  // ─── Horarios semanales del profesional ─────────────────────────
+  // Retorna array de filas de professional_schedules (location_id = null = horario general)
+  getSchedule: async (professionalId) => {
+    const { data, error } = await supabase
+      .from('professional_schedules')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .is('location_id', null)
+      .order('day_of_week');
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Reemplaza todos los horarios generales del profesional de una vez
+  saveSchedule: async (professionalId, schedules) => {
+    // 1. Borrar los existentes (horario general, sin sede específica)
+    const { error: delError } = await supabase
+      .from('professional_schedules')
+      .delete()
+      .eq('professional_id', professionalId)
+      .is('location_id', null);
+    if (delError) throw delError;
+
+    // 2. Insertar los activos
+    const toInsert = schedules
+      .filter((s) => s.is_active)
+      .map((s) => ({
+        professional_id: professionalId,
+        location_id: null,
+        day_of_week: s.day_of_week,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        is_active: true,
+      }));
+
+    if (toInsert.length > 0) {
+      const { error: insError } = await supabase
+        .from('professional_schedules')
+        .insert(toInsert);
+      if (insError) throw insError;
+    }
+  },
 };
 
 export default professionalService;

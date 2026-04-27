@@ -45,7 +45,8 @@ export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [selectedProfessional, setSelectedProfessional] = useState(null);
-  const [selectedService, setSelectedService] = useState(null);
+  // Array de servicios (multi-selección)
+  const [selectedServices, setSelectedServices] = useState([]);
   // 'yape_plin' | 'pay_on_arrival' | null
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
@@ -99,18 +100,19 @@ export default function BookingPage() {
   const handleSelectLocation = (loc) => {
     setSelectedLocation(loc);
     setSelectedProfessional(null);
-    setSelectedService(null);
+    setSelectedServices([]);
     setCurrentStep(2);
   };
 
   const handleSelectProfessional = (pro) => {
     setSelectedProfessional(pro);
-    setSelectedService(null);
+    setSelectedServices([]);
     setCurrentStep(3);
   };
 
-  const handleSelectService = (srv) => {
-    setSelectedService(srv);
+  // Recibe array de servicios seleccionados
+  const handleSelectServices = (srvArray) => {
+    setSelectedServices(srvArray);
     setSelectedPaymentMethod(null);
     setCurrentStep(4);
   };
@@ -124,14 +126,14 @@ export default function BookingPage() {
     if (currentStep === 1) return;
     if (currentStep === 2) setSelectedLocation(null);
     if (currentStep === 3) setSelectedProfessional(null);
-    if (currentStep === 4) setSelectedService(null);
+    if (currentStep === 4) setSelectedServices([]);
     if (currentStep === 5) setSelectedPaymentMethod(null);
     setCurrentStep(currentStep - 1);
   };
 
   // ─── Confirmar cita (paso 4 → BookingSuccess) ─────────────────
   const handleConfirmBooking = async (formData) => {
-    if (!tenant || !selectedLocation || !selectedProfessional || !selectedService) {
+    if (!tenant || !selectedLocation || !selectedProfessional || !selectedServices.length) {
       toast.error('Faltan datos. Vuelve a empezar.');
       return;
     }
@@ -144,7 +146,9 @@ export default function BookingPage() {
         tenant_id: tenant.id,
         location_id: selectedLocation.id,
         professional_id: selectedProfessional.id,
-        service_id: selectedService.id,
+        // Primer servicio como principal (backward compat), array completo para multi
+        service_id: selectedServices[0].id,
+        service_ids: selectedServices.map((s) => s.id),
         client_first_name: formData.client_first_name,
         client_last_name: formData.client_last_name,
         client_phone: formData.client_phone,
@@ -171,7 +175,7 @@ export default function BookingPage() {
   const handleBookAnother = () => {
     setSelectedLocation(null);
     setSelectedProfessional(null);
-    setSelectedService(null);
+    setSelectedServices([]);
     setSelectedPaymentMethod(null);
     setCreatedAppointment(null);
     setCurrentStep(1);
@@ -266,7 +270,7 @@ export default function BookingPage() {
           <BookingSuccess
             appointmentId={createdAppointment.id}
             startTime={createdAppointment.start_time}
-            serviceName={selectedService?.name}
+            serviceName={selectedServices.map((s) => s.name).join(', ')}
             professionalName={
               selectedProfessional
                 ? `${selectedProfessional.first_name || ''} ${selectedProfessional.last_name || ''}`.trim()
@@ -343,24 +347,24 @@ export default function BookingPage() {
           {currentStep === 3 && (
             <StepService
               services={servicesOfProfessional}
-              onSelectService={handleSelectService}
+              onSelectServices={handleSelectServices}
             />
           )}
 
-          {currentStep === 4 && selectedService && (
+          {currentStep === 4 && selectedServices.length > 0 && (
             <StepPaymentMethod
-              amount={Number(selectedService.price || 0)}
+              amount={selectedServices.reduce((sum, s) => sum + Number(s.price || 0), 0)}
               selectedMethod={selectedPaymentMethod}
               onSelect={handleSelectPaymentMethod}
             />
           )}
 
-          {currentStep === 5 && selectedService && selectedPaymentMethod && (
+          {currentStep === 5 && selectedServices.length > 0 && selectedPaymentMethod && (
             <StepDateTime
               tenantId={tenant.id}
               locationId={selectedLocation.id}
               professionalId={selectedProfessional.id}
-              service={selectedService}
+              services={selectedServices}
               paymentMethod={selectedPaymentMethod}
               maxAdvanceDays={tenant.max_advance_booking_days || 30}
               onConfirm={handleConfirmBooking}

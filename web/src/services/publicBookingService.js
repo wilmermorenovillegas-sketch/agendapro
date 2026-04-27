@@ -1,9 +1,13 @@
 // ═══════════════════════════════════════════════════════════════
 // src/services/publicBookingService.js
 // Servicio para la pagina publica de reserva (/book/:tenantSlug).
-// Llama a las 4 RPCs publicas (SECURITY DEFINER) creadas en la
-// migracion 003_public_booking. Funciona con el ANON KEY de Supabase
-// sin requerir usuario autenticado.
+// Llama a las RPCs públicas (SECURITY DEFINER) sin requerir auth.
+//
+// RPCs activas:
+//   get_public_tenant_by_slug     → info del tenant
+//   get_public_locations_and_pros → árbol de sedes/profesionales/servicios
+//   get_available_slots           → slots disponibles (multi-servicio)
+//   create_public_appointment     → crea la cita + appointment_services
 // ═══════════════════════════════════════════════════════════════
 
 import { supabase } from '../lib/supabase';
@@ -35,14 +39,20 @@ const publicBookingService = {
   },
 
   // Slots disponibles para un profesional+servicio en una fecha.
-  // date debe venir como string 'YYYY-MM-DD' (zona Lima).
-  async getAvailableSlots({ professionalId, serviceId, locationId, date }) {
-    const { data, error } = await supabase.rpc('get_available_slots', {
+  // - date: string 'YYYY-MM-DD' (zona Lima)
+  // - totalDuration: duración total en minutos (opcional, para multi-servicio)
+  async getAvailableSlots({ professionalId, serviceId, locationId, date, totalDuration }) {
+    const params = {
       p_professional_id: professionalId,
-      p_service_id: serviceId,
-      p_location_id: locationId,
-      p_date: date,
-    });
+      p_service_id:      serviceId,
+      p_location_id:     locationId,
+      p_date:            date,
+    };
+    // Solo pasar totalDuration si viene definido (evita ambigüedad con la versión de 4 params)
+    if (totalDuration != null && totalDuration > 0) {
+      params.p_total_duration = totalDuration;
+    }
+    const { data, error } = await supabase.rpc('get_available_slots', params);
     if (error) throw error;
     const parsed = parseRpc(data);
     return Array.isArray(parsed) ? parsed : [];
@@ -73,17 +83,32 @@ const publicBookingService = {
     return path;
   },
 
-  // Crea la cita publica via RPC. Hace upsert del cliente por telefono.
-  // payload: { tenant_id, location_id, professional_id, service_id,
-  //            client_first_name, client_last_name, client_phone,
-  //            client_email, start_time (ISO), payment_proof_url }
+  // Crea la cita publica via RPC usando parámetros individuales.
+  // Soporta multi-servicio via service_ids[] (campo nuevo).
+  // payload: {
+  //   tenant_id, location_id, professional_id,
+  //   service_id (primer servicio), service_ids (array completo),
+  //   client_first_name, client_last_name, client_phone, client_email,
+  //   start_time (ISO), payment_method, payment_proof_url
+  // }
   async createAppointment(payload) {
     const { data, error } = await supabase.rpc('create_public_appointment', {
-      p_data: payload,
+      p_tenant_id:         payload.tenant_id,
+      p_location_id:       payload.location_id,
+      p_professional_id:   payload.professional_id,
+      p_service_id:        payload.service_id,
+      p_client_first_name: payload.client_first_name,
+      p_client_last_name:  payload.client_last_name  || '',
+      p_client_phone:      payload.client_phone,
+      p_client_email:      payload.client_email       || '',
+      p_start_time:        payload.start_time,
+      p_payment_method:    payload.payment_method     || 'pay_on_arrival',
+      p_payment_proof_url: payload.payment_proof_url  || null,
+      p_service_ids:       payload.service_ids        || null,
     });
     if (error) throw error;
     const result = parseRpc(data);
-    if (result && !result.success) {
+    if (result && result.success === false) {
       throw new Error(result.message || 'No se pudo crear la cita.');
     }
     return result;

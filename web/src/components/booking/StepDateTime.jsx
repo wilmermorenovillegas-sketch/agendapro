@@ -54,6 +54,8 @@ export default function StepDateTime({
   tenantId,
   locationId,
   professionalId,
+  // Acepta array (multi-servicio) o servicio único (backward compat)
+  services,
   service,
   maxAdvanceDays = 30,
   onConfirm,
@@ -61,6 +63,17 @@ export default function StepDateTime({
   // 'yape_plin' | 'pay_on_arrival' — define si pedimos comprobante o no
   paymentMethod = 'yape_plin',
 }) {
+  // Normalizar: siempre trabajamos con array internamente
+  const servicesArray = services
+    ? (Array.isArray(services) ? services : [services])
+    : (service ? [service] : []);
+
+  // Duración total y precio total de todos los servicios seleccionados
+  const totalDuration = servicesArray.reduce((sum, s) => sum + (s.duration_minutes || 30), 0);
+  const totalPrice    = servicesArray.reduce((sum, s) => sum + Number(s.price || 0), 0);
+  // Primer servicio (para la llamada RPC de backward compat)
+  const primaryService = servicesArray[0] || {};
+
   const requiresReceipt = paymentMethod === 'yape_plin';
   // ─── Estado del calendario ──────────────────────────────────
   const today = useMemo(() => makeDate(
@@ -103,9 +116,10 @@ export default function StepDateTime({
     publicBookingService
       .getAvailableSlots({
         professionalId,
-        serviceId: service.id,
+        serviceId: primaryService.id,
         locationId,
         date: toLocalISODate(selectedDate),
+        totalDuration,  // pasa la duración total para slots multi-servicio
       })
       .then((data) => { if (!cancelled) setSlots(data); })
       .catch((err) => {
@@ -115,7 +129,7 @@ export default function StepDateTime({
       .finally(() => { if (!cancelled) setLoadingSlots(false); });
 
     return () => { cancelled = true; };
-  }, [selectedDate, professionalId, service.id, locationId]);
+  }, [selectedDate, professionalId, primaryService.id, locationId, totalDuration]);
 
   // ─── Construir las celdas del mes ───────────────────────────
   const calendarCells = useMemo(() => {
@@ -182,6 +196,9 @@ export default function StepDateTime({
     });
   };
 
+  // Formato amigable de precio total
+  const totalPriceFormatted = `S/ ${totalPrice.toFixed(2)}`;
+
   return (
     <div className="space-y-6">
       <div>
@@ -191,6 +208,20 @@ export default function StepDateTime({
         <p className="text-sm text-gray-500 mt-1">
           Selecciona un día disponible y luego un horario.
         </p>
+      </div>
+
+      {/* Resumen de servicios seleccionados */}
+      <div className="bg-teal-50 border border-teal-100 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-teal-600 font-medium mb-0.5">Servicios seleccionados</p>
+          <p className="text-sm font-semibold text-teal-900 truncate">
+            {servicesArray.map((s) => s.name).join(' + ')}
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-xs text-teal-600">{totalDuration} min</p>
+          <p className="text-sm font-bold text-teal-800">S/ {totalPrice.toFixed(2)}</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

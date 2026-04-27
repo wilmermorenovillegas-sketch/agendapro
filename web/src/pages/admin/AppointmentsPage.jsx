@@ -390,6 +390,24 @@ export default function AppointmentsPage() {
   );
 }
 
+// ─── Helpers para multi-servicio ─────────────────────────────
+// Retorna el nombre de todos los servicios de una cita (separados por " + ")
+function getServiceNames(appt) {
+  if (appt.appointment_services?.length > 0) {
+    const sorted = [...appt.appointment_services].sort((a, b) => a.display_order - b.display_order);
+    return sorted.map((s) => s.service?.name || '?').join(' + ');
+  }
+  return appt.services?.name || '—';
+}
+
+// Retorna la duración total de todos los servicios de una cita
+function getTotalMinutes(appt) {
+  if (appt.appointment_services?.length > 0) {
+    return appt.appointment_services.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+  }
+  return appt.services?.duration_minutes || 0;
+}
+
 function DayView({ appointments, onSlotClick, onApptClick }) {
   const hours = Array.from({ length: 16 }, (_, i) => i + 7);
 
@@ -445,7 +463,7 @@ function DayView({ appointments, onSlotClick, onApptClick }) {
                               {a.clients?.first_name} {a.clients?.last_name}
                             </div>
                             <div className="text-xs text-gray-600 truncate">
-                              {a.services?.name} · {a.services?.duration_minutes}min
+                              {getServiceNames(a)} · {getTotalMinutes(a)}min
                             </div>
                           </div>
                           <div className="text-xs font-semibold text-teal-600 whitespace-nowrap">
@@ -605,9 +623,30 @@ function AppointmentDetail({ appt, onClose, onStatusChange }) {
         </div>
 
         <div className="border-t border-gray-100 pt-4">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Servicio</h3>
-          <p className="text-base font-bold text-slate-800">{appt.services?.name}</p>
-          <p className="text-sm text-gray-500">{appt.services?.duration_minutes} minutos</p>
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+            Servicio{(appt.appointment_services?.length > 1) ? 's' : ''}
+          </h3>
+          {/* Multi-servicio: lista detallada */}
+          {appt.appointment_services?.length > 0 ? (
+            <div className="space-y-1.5">
+              {[...appt.appointment_services]
+                .sort((a, b) => a.display_order - b.display_order)
+                .map((svc, i) => (
+                  <div key={svc.id || i} className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-800">{svc.service?.name || '—'}</span>
+                    <span className="text-gray-400">{svc.duration_minutes}min · S/ {Number(svc.price).toFixed(2)}</span>
+                  </div>
+                ))}
+              <div className="text-xs text-teal-600 font-semibold mt-1">
+                Total: {getTotalMinutes(appt)} min
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-base font-bold text-slate-800">{appt.services?.name}</p>
+              <p className="text-sm text-gray-500">{appt.services?.duration_minutes} minutos</p>
+            </>
+          )}
         </div>
 
         <div className="border-t border-gray-100 pt-4 grid grid-cols-2 gap-4">

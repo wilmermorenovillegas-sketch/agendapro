@@ -14,14 +14,17 @@ const appointmentService = {
       .from('appointments')
       .select(`
         id, start_time, end_time, status, price, notes,
-        payment_status, payment_proof_url, payment_notes,
+        payment_status, payment_proof_url, payment_notes, payment_method,
         client_id, service_id, professional_id, location_id,
         clients ( first_name, last_name, phone, email ),
         services ( name, duration_minutes, color ),
         professionals ( color, profile_id ),
-        locations ( name )
+        locations ( name ),
+        appointment_services ( id, service_id, price, duration_minutes, display_order,
+          service:service_id ( name, color, duration_minutes ) )
       `)
-      .eq('tenant_id', tenantId);
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null);
 
     if (filters.startDate) query = query.gte('start_time', filters.startDate);
     if (filters.endDate) query = query.lte('start_time', filters.endDate);

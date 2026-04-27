@@ -6,6 +6,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import dashboardService from '../../services/dashboardService';
+import serviceService from '../../services/serviceService';
+import OnboardingWizard from '../../components/admin/OnboardingWizard';
 
 const PERIODS = [
   { value: 'week', label: '7 días' },
@@ -21,14 +23,34 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Onboarding: mostrar si no hay servicios y no se completó antes
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      try { setStats(await dashboardService.getStats(period)); }
-      catch (err) { setError(err.message); }
-      finally { setLoading(false); }
+      try {
+        // Carga stats y conteo de servicios en paralelo
+        const [statsData, svcCount] = await Promise.all([
+          dashboardService.getStats(period),
+          serviceService.count(),
+        ]);
+        setStats(statsData);
+
+        // Mostrar wizard si no hay servicios y no fue completado antes
+        if (svcCount === 0 && profile?.tenant_id) {
+          const flag = localStorage.getItem(`agendapro_onboarding_v1_${profile.tenant_id}`);
+          if (!flag) setShowOnboarding(true);
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
   if (loading) return <div className="flex items-center justify-center p-12"><div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -38,7 +60,41 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6">
+      {/* ═══ WIZARD DE ONBOARDING ═══ */}
+      {showOnboarding && (
+        <OnboardingWizard
+          tenantId={profile?.tenant_id}
+          tenantSlug={profile?.tenant_slug}
+          onClose={() => {
+            setShowOnboarding(false);
+            setOnboardingDismissed(true);
+            if (profile?.tenant_id) {
+              localStorage.setItem(`agendapro_onboarding_v1_${profile.tenant_id}`, 'done');
+            }
+          }}
+          onComplete={() => setShowOnboarding(false)}
+        />
+      )}
+
       <div className="max-w-6xl">
+
+        {/* ═══ BANNER DE BIENVENIDA (sin servicios, wizard descartado) ═══ */}
+        {!showOnboarding && !onboardingDismissed && s.services_count === 0 && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-teal-50 to-teal-100 border border-teal-200 rounded-2xl flex items-center gap-4">
+            <div className="text-3xl shrink-0">🚀</div>
+            <div className="flex-1 min-w-0">
+              <p className="font-sora font-bold text-teal-800 text-sm">¡Tu negocio está casi listo!</p>
+              <p className="text-teal-700 text-xs mt-0.5">Configura tus servicios para empezar a recibir citas en línea.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowOnboarding(true)}
+              className="shrink-0 px-4 py-2 bg-teal-600 text-white rounded-xl text-sm font-semibold hover:bg-teal-700 transition-colors">
+              Configurar ahora
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-bold text-slate-800 font-sora">¡Hola, {profile?.first_name}!</h1>

@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import professionalService from '../../services/professionalService';
 import locationService from '../../services/locationService';
+import ProfessionalScheduleModal from '../../components/admin/ProfessionalScheduleModal';
 
 const COLORS = ['#0F766E','#2563EB','#7C3AED','#DC2626','#EA580C','#CA8A04','#16A34A','#0891B2','#9333EA','#E11D48'];
 
@@ -27,6 +28,8 @@ export default function ProfessionalsPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState(EMPTY);
+  // Modal de horarios
+  const [scheduleProf, setScheduleProf] = useState(null);
 
   const loadData = async () => {
     try {
@@ -207,6 +210,10 @@ export default function ProfessionalsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
+                        <button onClick={() => setScheduleProf(prof)} title="Editar horarios"
+                          className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors text-xs font-medium">
+                          🕐 Horarios
+                        </button>
                         <button onClick={() => handleEdit(prof)}
                           className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors">✏️</button>
                         <button onClick={() => handleDelete(prof)}
@@ -218,6 +225,15 @@ export default function ProfessionalsPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* ═══ MODAL DE HORARIOS ═══ */}
+        {scheduleProf && (
+          <ProfessionalScheduleModal
+            professional={scheduleProf}
+            onClose={() => setScheduleProf(null)}
+            onSaved={() => setSuccess(`Horario de ${scheduleProf.full_name || scheduleProf.first_name} guardado.`)}
+          />
         )}
 
         {/* ═══ FORMULARIO ═══ */}
